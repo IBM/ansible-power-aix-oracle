@@ -40,6 +40,7 @@ https://www.ibm.com/support/knowledgecenter/ssw_aix_72/navigation/welcome.html
 
 # System Configuration
 
+![System Topology](https://github.com/IBM/ansible-power-aix-oracle/blob/main/pics/System_Configuration.png)
 
 Below is the system configuration that we have used for testing
 We have used two servers one Linux_on_Power server used for running Ansible Engine and second one AIX server used for installation and configuration on oracle 19c Database software.
