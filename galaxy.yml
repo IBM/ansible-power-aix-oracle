@@ -54,7 +54,7 @@ dependencies: {}
 repository: https://github.com/IBM/ansible-power-aix-oracle 
 
 # The URL to any online docs
-#documentation: http://docs.example.com
+documentation: https://github.com/IBM/ansible-power-aix-oracle/tree/main/docs
 
 # The URL to the homepage of the collection/project
 homepage:  https://github.com/IBM

@@ -21,7 +21,7 @@
   "license_file": null,
   "dependencies": {},
   "repository": "https://github.com/IBM/ansible-power-aix-oracle",
-  "documentation": "http://docs.example.com",
+  "documentation": "https://github.com/IBM/ansible-power-aix-oracle/tree/main/docs",
   "homepage": "https://github.com/IBM",
   "issues": "https://github.com/IBM/ansible-power-aix-oracle/issues"
  },
