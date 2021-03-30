@@ -1,0 +1,36 @@
+{
+ "collection_info": {
+  "namespace": "ibm",
+  "name": "power_aix_oracle",
+  "version": "1.0.0",
+  "authors": [
+   "Bhargavaram Akula bhargaku@in.ibm.com"
+  ],
+  "readme": "README.md",
+  "tags": [
+   "infrastructure",
+   "ibm",
+   "power",
+   "aix",
+   "oracle"
+  ],
+  "description": "Ansible content for installing oracle database 19c on IBM power systems AIX Operating system",
+  "license": [
+   "Apache-2.0-or-later"
+  ],
+  "license_file": null,
+  "dependencies": {},
+  "repository": "https://github.com/IBM/ansible-power-aix-oracle",
+  "documentation": "http://docs.example.com",
+  "homepage": "https://github.com/IBM",
+  "issues": "https://github.com/IBM/ansible-power-aix-oracle/issues"
+ },
+ "file_manifest_file": {
+  "name": "FILES.json",
+  "ftype": "file",
+  "chksum_type": "sha256",
+  "chksum_sha256": "ed78c4825e49fbd25938d8d400d903d6f6b4cfd7e900f785cbeddbf97998609b",
+  "format": 1
+ },
+ "format": 1
+}

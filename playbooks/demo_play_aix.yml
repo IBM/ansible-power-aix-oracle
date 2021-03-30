@@ -1,0 +1,17 @@
+- hosts: all
+  gather_facts: no
+  roles:
+    - role: power_aix_bootstrap
+      vars:
+        download_dir: "~"
+        target_dir: "/tmp/.ansible.cpdir"
+      tags: bootstrap
+- hosts: all
+  gather_facts: yes 
+  roles:
+    - role: preconfig
+      tags: preconfig 
+    - role: oracle_install
+      tags: oracle_install
+    - role: oracle_createdb
+      tags: oracle_createdb

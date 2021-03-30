@@ -1,0 +1,145 @@
+# Copyright (c) IBM Corporation 2021
+# tasks file for AIX config for Oracle Single Instance DB 
+# chfs fails if the target size is the same as the current!
+- name: Check current /var size
+  raw: df -m /var | awk '$0 !~ /Filesystem/ {printf "%d", $2}'
+  register: var_fs_size_out
+
+# rootvg partition size is 250M, /var size must be multiple of 250M
+- name: Expand /var target directory +500M
+  aix_filesystem:
+    filesystem: /var
+    size: +500M
+    state: present
+  when: var_fs_size_out.stdout < '500'
+
+- name: Check current /opt size
+  raw: df -m /opt | awk '$0 !~ /Filesystem/ {printf "%d", $2}'
+  register: opt_fs_size_out
+
+# rootvg partition size is 250M, /opt size must be multiple of 250M
+- name: Expand /opt target directory +750M
+  aix_filesystem:
+    filesystem: /opt
+    size: +750M
+    state: present
+  when: opt_fs_size_out.stdout < '750'
+
+- name: Running cfgmgr to discover new devices
+  shell: cfgmgr
+
+- name: Running cfgmgr to discover new devices
+  aix_devices:
+    device: all
+
+- name: Changes /tmp to 12G size, holds ansible temp files
+  aix_filesystem:
+    filesystem: /tmp
+    size: 12G
+    state: present
+
+- name: Changing ulimits
+  raw: 'chsec -f /etc/security/limits -s "default" -a fsize=-1 -a core=-1 -a cpu=-1 -a data=-1 -a rss=-1 -a stack=-1 -a nofiles=-1'
+
+- name : Installing zip, unzip, GNUtar using yum - prerequisite power_aix collection download it from ansible galaxy
+  yum:
+    name: unzip, zip, tar
+    state: latest
+  ignore_errors: yes
+
+- name: setting DNS
+  copy:
+    src: ../files/resolv.conf
+    dest: /etc/resolv.conf
+    mode : '0664'
+    owner: root
+    group: system 
+ 
+- name: setting DNS order
+  copy:
+    src: ../files/netsvc.conf
+    dest: /etc/netsvc.conf
+    mode : '0664'
+    owner: root
+    group: system
+
+- name: Checking /etc/hosts for local IP
+  command: "grep {{ansible_default_ipv4.address}} /etc/hosts"
+  register: IP_present
+  when: ansible_default_ipv4 is defined
+  changed_when: IP_present.rc == 1
+  failed_when: IP_present.rc > 2
+- block:
+  - name: Getting real hostname
+    command: hostname
+    register: real_hostname
+  - debug:
+      msg: real_hostname "{{ real_hostname.stdout }}" ansible_hostname  "{{ ansible_hostname }}"
+  - name: create hostname_line
+    set_fact:
+      hostname_line: "{{ ansible_hostname }} {{ real_hostname.stdout }}"
+    when:
+      - real_hostname.stdout is defined
+      - real_hostname.stdout != ansible_hostname
+  - name: create hostname_line
+    set_fact:
+      hostname_line: "{{ ansible_hostname }} "
+    when:
+      - real_hostname.stdout is defined
+      - real_hostname.stdout == ansible_hostname
+  - name: setting uname
+    shell: uname -S  "{{ ansible_hostname }} "
+  - name: Resolve hostname in /etc/hosts
+    lineinfile:
+      dest: '/etc/hosts'
+      regexp: '^{{ ansible_default_ipv4.address }}.*'
+      insertafter: '^127.0.0.1 .*localhost*'
+      line: "{{ ansible_default_ipv4.address }} {{ hostname_line }}"
+      state: present
+      backup: True
+    when: ansible_default_ipv4.address is defined
+    become: True
+  when:
+    - IP_present.rc == 1
+
+- name: Changes maxuproc
+  aix_devices:
+    device: sys0
+    attributes:
+      maxuproc: '16384'
+
+- name: listing iocp attribute to check if reboot is required
+  shell: "lsattr -El iocp0 -a autoconfig -O"
+  register : iocp0
+
+- name: value of iocp0
+  debug:
+    msg : "{{iocp0.stdout_lines[1]}}"
+
+- name: setiing var
+  set_fact:
+    attr: "{{iocp0.stdout_lines[1]}}"
+
+- name: setting iocp to autconfig available
+  shell: chdev -l iocp0 -P -a autoconfig=available
+  when: attr  == "defined"
+
+- name: generating system reboot script
+  copy:
+    src: ../files/rebootscript.sh
+    dest: /tmp/rebootscript.sh
+    mode: '0770'
+  when: attr  == "defined"
+
+- name: executing system reboot script
+  shell : "/tmp/rebootscript.sh"
+  when: attr  == "defined"
+
+- name: Wait 600 seconds, but only start checking after 120 seconds
+  wait_for_connection:
+    delay: 120
+    timeout: 600
+    sleep: 20
+    connect_timeout: 10
+  when: attr  == "defined"
+

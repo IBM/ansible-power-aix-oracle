@@ -1,0 +1,28 @@
+#block:
+
+- name: create {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}} filesystem
+  aix_filesystem:
+    filesystem:    "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
+    size: "{{item.size}}"
+    state: present
+    vg: "{{ora_fs_vg}}"
+- name: mount {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}
+  aix_filesystem:
+    filesystem:   "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
+    state: mounted
+  ignore_errors: yes
+- name: Checking permission of {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}
+  stat:
+    path: "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
+  register: ora_dir
+- name: changing ownership to {{ora_user}} on {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}
+  file:
+    path: "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
+    state: directory
+    recurse: yes
+    owner: "{{ora_user}}"
+    group: "{{ora_group}}"
+    mode: '0775'
+  when: ora_dir.stat.exists and ora_dir.stat.pw_name != ora_user
+  
+#with_items: "{{ ora_db_fs_list }}"  
