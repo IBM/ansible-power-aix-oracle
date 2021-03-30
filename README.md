@@ -1,7 +1,7 @@
 <!-- This should be the location of the title of the repository, normally the short name -->
 # IBM Power Systems AIX Oracle Collection - power_aix_oracle
 
-This repository contains ansible power_aix_oracle collection which is used for installing Oracle Single Instance database 19c on AIX operating system and creates test database on AIX filesystem.
+This repository contains ansible **power_aix_oracle** collection which is used for installing Oracle Single Instance database 19c on AIX operating system and creates test database on AIX filesystem.
 
 This collection automates Oracle 19c database installation and creation steps.
 
@@ -43,14 +43,15 @@ https://www.ibm.com/support/knowledgecenter/ssw_aix_72/navigation/welcome.html
 
 Below is the system configuration that we have used for testing
 We have used two servers one Linux_on_Power server used for running Ansible Engine and second one AIX server used for installation and configuration on oracle 19c Database software.
+
 a)	Linux_on_Power server : 
 
                Operating System          : RHEL 8.2
                Ansible Engine Version    : 2.10.2
 	       
-    For Ansible Engine prerequisites refer to below link
+   For Ansible Engine prerequisites refer to below link
     
-    https://docs.ansible.com/ansible/latest/installation_guide/index.html
+   https://docs.ansible.com/ansible/latest/installation_guide/index.html
     
 b)	AIX server :
 
@@ -58,23 +59,23 @@ b)	AIX server :
                Oracle DB Version        : 19.3.0.0.0
 	       CPUs 		        : 4
                RAM		        : 64GB
-               Storage Disks	          : 2X40GB (one rootvg and another for oracle DB) 
+               Storage Disks	        : 2X40GB (one rootvg and another for oracle DB) 
 	       
-    Refer below link to get details of minimum software/hardware requirements that are need to run oracle 19c database on AIX operating system
+   Refer below link to get details of minimum software/hardware requirements that are need to run oracle 19c database on AIX operating system
     
-    https://docs.oracle.com/en/database/oracle/oracle-database/19/axdbi/oracle-database-installation-checklist.html
+   https://docs.oracle.com/en/database/oracle/oracle-database/19/axdbi/oracle-database-installation-checklist.html
 
 # Steps Followed
 
-###1.	Install Ansible Engine on your preferred operation system. We have installed and tested Ansible Engine on x86 server and Linux-on-Power server
+##1.	Install Ansible Engine on your preferred operation system. We have installed and tested Ansible Engine on x86 server and Linux-on-Power server
 
-    Refer : https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
+   Refer : https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
     
-       We have created a user “ansible” on LoP server and considered /home/ansible as working      
-       Directory.
+   We have created a user “ansible” on LoP server and considered /home/ansible as working directory.
 
-###2.	Setup ssh Equivalence with managed host(AIX) server
-    If this is a first time using ssh, then you probably haven’t created your ssh keys. To check go to ~/.ssh and see if id_rsa file exists. If not you must create      the ssh keys.
+##2.	Setup ssh Equivalence with managed host(AIX) server
+    
+   If this is a first time using ssh, then you probably haven’t created your ssh keys. To check go to ~/.ssh and see if id_rsa file exists. If not you must create      the ssh keys.
   To create the ssh keys, run the following:
  ```
   $ ssh-keygen
@@ -89,14 +90,15 @@ b)	AIX server :
 ```
   $ ssh ‘root@p337n241’
 ```
-###3.	Preparing to run the oracle playbook
+##3.	Preparing to run the oracle playbook
 
-	* Download the Oracle AIX playbook ansible collection from ansible galaxy or github.
+   * Download the Oracle AIX playbook ansible collection from ansible galaxy or github.
 	
-           https://galaxy.ansible.com/ibm/power_aix_oracle
-           https://github.com/IBM/ansible-power-aix-oracle
+        https://galaxy.ansible.com/ibm/power_aix_oracle
+	   
+        https://github.com/IBM/ansible-power-aix-oracle
 
-           Download the power_aix_oracle tarball from ansible-galaxy and extract it to some directory for offline use or you can run the ansible-galaxy installation command:
+     Download the power_aix_oracle tarball from ansible-galaxy and extract it to some directory for offline use or you can run the ansible-galaxy installation command:
 ```	   
 	$ ansible-galaxy collection install ibm.power_aix_oracle
 ```
@@ -105,7 +107,7 @@ b)	AIX server :
   
   https://docs.ansible.com/ansible/latest/user_guide/collections_using.html
 
- ####Before running the playbook you should do
+ **###Before running the playbook you should do**
 
  -	Download the Oracle 19c software from OTN or oracle edelivery site
  
@@ -116,9 +118,12 @@ b)	AIX server :
  -	Modify the Oracle Binary location path variable "oracledbaix19c" in file "roles/preconfig/defaults/main.yml"
  -	Check other Oracle related parameters in file "roles/preconfig/defaults/main.yml", modify it based on your need
  -	Based on your environment update resolv.conf and netsvc.conf files at “roles/preconfig/files/”
- -	There should be atleast one free disk available other than rootvg for Oracle DB Installation and test database creation on JFS filesystem. Make sure disk header   information is clean. You can check the header information using “lquerypv -h /dev/hdiskX”. These free disks are used for staging oracle software binary and oracle datafiles.  Minimum 40GB disk storage is needed for running this Oracle playbook.
+ -	There should be atleast one free disk available other than rootvg for Oracle DB Installation and test database creation on JFS filesystem. 
+        Make sure disk header   information is clean. You can check the header information using “lquerypv -h /dev/hdiskX”. 
+	These free disks are used for staging oracle software binary and oracle datafiles.  
+	Minimum 40GB disk storage is needed for running this Oracle playbook.
 
-####The oracle playbook contains below four roles
+**###The oracle playbook contains below four roles**
  	
   **power_aix_bootstrap** : This role is used for configuring yum and python on AIX managed host. The code for this role is taken from power_aix collection available in ansible galaxy and GIT hub.
   
@@ -157,7 +162,7 @@ Create/Update ansible.cfg and inventory files in collections “playbooks” dir
     p227n241
 ```
 
-###4.	Execute playbook using below command
+##4.	Execute playbook using below command
 ```
 	$ ansible-playbook demo_play_aix.yml
 ```
@@ -264,7 +269,7 @@ no python in /usr/bin /etc /usr/sbin /usr/ucb /usr/bin/X11 /sbin /usr/java8_64/j
 ```
  if not, The following procedures will help you install the components.
 
-####Option A, Using the ansible playbook collection: ansible-power-aix to install missing components
+##Option A, Using the ansible playbook collection: ansible-power-aix to install missing components
 •	Install and configure yum, python on the managed host. You can do this using anisble power-aix collection. Power-aix collection can also perform other AIX admin tasks too.
 
       	https://ibm.github.io/ansible-power-aix/index.html 
@@ -344,7 +349,7 @@ d)	Bootstrap playbook creates below files in user home directory. You can do a c
 #+ cleanup of files created in $HOME
 (cd $HOME; rm -f rpm.rte yum_bundle.tar yum_installer.sh
 ```
-####Option B, installing them manually onto the managed host.
+##Option B, installing them manually onto the managed host.
  
 https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/ezinstall/ppc/
 
