@@ -67,13 +67,13 @@ b)	AIX server :
 
 # Steps Followed
 
-##1.	Install Ansible Engine on your preferred operation system. We have installed and tested Ansible Engine on x86 server and Linux-on-Power server
+## 1.	Install Ansible Engine on your preferred operation system. We have installed and tested Ansible Engine on x86 server and Linux-on-Power server
 
    Refer : https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
     
    We have created a user “ansible” on LoP server and considered /home/ansible as working directory.
 
-##2.	Setup ssh Equivalence with managed host(AIX) server
+## 2.	Setup ssh Equivalence with managed host(AIX) server
     
    If this is a first time using ssh, then you probably haven’t created your ssh keys. To check go to ~/.ssh and see if id_rsa file exists. If not you must create      the ssh keys.
   To create the ssh keys, run the following:
@@ -90,7 +90,7 @@ b)	AIX server :
 ```
   $ ssh ‘root@p337n241’
 ```
-##3.	Preparing to run the oracle playbook
+## 3.	Preparing to run the oracle playbook
 
    * Download the Oracle AIX playbook ansible collection from ansible galaxy or github.
 	
@@ -162,7 +162,7 @@ Create/Update ansible.cfg and inventory files in collections “playbooks” dir
     p227n241
 ```
 
-##4.	Execute playbook using below command
+## 4.	Execute playbook using below command
 ```
 	$ ansible-playbook demo_play_aix.yml
 ```
@@ -269,7 +269,7 @@ no python in /usr/bin /etc /usr/sbin /usr/ucb /usr/bin/X11 /sbin /usr/java8_64/j
 ```
  if not, The following procedures will help you install the components.
 
-##Option A, Using the ansible playbook collection: ansible-power-aix to install missing components
+## Option A, Using the ansible playbook collection: ansible-power-aix to install missing components
 •	Install and configure yum, python on the managed host. You can do this using anisble power-aix collection. Power-aix collection can also perform other AIX admin tasks too.
 
       	https://ibm.github.io/ansible-power-aix/index.html 
@@ -349,7 +349,7 @@ d)	Bootstrap playbook creates below files in user home directory. You can do a c
 #+ cleanup of files created in $HOME
 (cd $HOME; rm -f rpm.rte yum_bundle.tar yum_installer.sh
 ```
-##Option B, installing them manually onto the managed host.
+## Option B, installing them manually onto the managed host.
  
 https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/ezinstall/ppc/
 
