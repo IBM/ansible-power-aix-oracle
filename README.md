@@ -91,8 +91,15 @@ b)	AIX server :
         https://galaxy.ansible.com/ibm/power_aix_oracle
 	   
         https://github.com/IBM/ansible-power-aix-oracle
-
-     Download the power_aix_oracle tarball from ansible-galaxy and extract it to some directory for offline use or you can run the ansible-galaxy installation command:
+	
+     To download from github you can follow below steps
+     
+```
+     $ cd <working directory>
+     $ git clone https://github.com/IBM/ansible-power-aix-oracle.git
+     $ cd ansible-power-aix-oracle
+```
+   Download the power_aix_oracle tarball from ansible-galaxy and extract it to some directory for offline use or you can run the ansible-galaxy installation command:
 ```	   
 	$ ansible-galaxy collection install ibm.power_aix_oracle
 ```
