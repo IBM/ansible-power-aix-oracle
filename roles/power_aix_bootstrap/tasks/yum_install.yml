@@ -41,23 +41,14 @@
     register: rpm_dest
     delegate_to: localhost
 
-#  - name: Download latest rpm (installp) fileset
-#    get_url:
-#      url: "ftp://ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/INSTALLP/ppc/{{ rpm_src }}"
-#      url_username: anonymous
-#      url_password: anonymous
-#      dest: "{{ download_dir }}/{{ rpm_src }}"
-#      mode: '0644'
-#    when: not rpm_dest.stat.exists
-#    delegate_to: localhost
-
-  - name: Copy the rpm (installp) fileset
-    copy:
-      src: "files/rpm.rte"
-      dest: "{{ download_dir }}/rpm.rte"
-      mode: '0755'
-    when:
-     - not rpm_dest.stat.exists
+  - name: Download latest rpm (installp) fileset
+    get_url:
+      url: "ftp://ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/INSTALLP/ppc/{{ rpm_src }}"
+      url_username: anonymous
+      url_password: anonymous
+      dest: "{{ download_dir }}/{{ rpm_src }}"
+      mode: '0644'
+    when: not rpm_dest.stat.exists
     delegate_to: localhost
 
   - name: Check for yum_src file on localhost
@@ -66,7 +57,7 @@
     register: yum_dest
     delegate_to: localhost
 
-#  - name: Download yum bundle file
+  - name: Download yum bundle file
 #    get_url:
 #      url: "ftp://ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/ezinstall/ppc/{{ yum_src }}"
 #      url_username: anonymous
@@ -75,15 +66,14 @@
 #      mode: '0644'
 #    when: not yum_dest.stat.exists
 #    delegate_to: localhost
+# Because ftp://ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/ezinstall/ppc/yum_bundle.tar
+# returns corrupted file, use alternate download server
+# https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/ezinstall/ppc/yum_bundle.tar
+# to work around it.
 
-  - name: Copy the  yum bundle file
-    copy:
-      src: "files/yum_bundle.tar"
-      dest: "{{ download_dir }}/yum_bundle.tar"
-      mode: '0755'
-    when:
-     - not yum_dest.stat.exists
+    raw: "wget https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/ezinstall/ppc/yum_bundle.tar -O {{ download_dir }}/{{ yum_src }}"
     delegate_to: localhost
+    when: not yum_dest.stat.exists
 
   - name: Check for script file on localhost
     stat:
