@@ -16,7 +16,7 @@
   ],
   "description": "Ansible content for installing oracle database 19c on IBM power systems AIX Operating system",
   "license": [
-   "Apache-2.0-or-later"
+   "Apache-2.0"
   ],
   "license_file": null,
   "dependencies": {},

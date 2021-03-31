@@ -88,7 +88,7 @@ b)	AIX server :
 
    * Download the Oracle AIX playbook ansible collection from ansible galaxy or github.
 	
-        https://galaxy.ansible.com/ibm/power_aix_oracle
+        https://galaxy.ansible.com/bhargava250/power_aix_oracle
 	   
         https://github.com/IBM/ansible-power-aix-oracle
 	
@@ -101,7 +101,7 @@ b)	AIX server :
 ```
    Download the power_aix_oracle tarball from ansible-galaxy and extract it to some directory for offline use or you can run the ansible-galaxy installation command:
 ```	   
-	$ ansible-galaxy collection install ibm.power_aix_oracle
+	$ ansible-galaxy collection install bhargava250.power_aix_oracle
 ```
   The above command will install power_aix_oracle collection at location ~/.ansible/collections
   For more information regarding ansible collections refer below link
@@ -203,7 +203,7 @@ We have downloaded ansible power_aix collection 1.2.1 and copied the role “ po
 We have modified tasks files yum_install.yml and python_install.yml roles/power_aix_bootstrap/tasks
 
 * Changes done to yum_install.yml
-    - Instead of downloading  rpm.rte and yum_bundle.tar files from ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/INSTALLP/ppc, we have downloaded and placed those files at power_aix_bootstrap role files directory (roles/power_aix_bootstrap/files)
+    - For downloading yum_bundle.tar file we have changed the code from using ftp.software.ibm.com/aix/freeSoftware/aixtoolbox/INSTALLP/ppc to wget https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/ezinstall/ppc/ 
 
 Note: For latest yum bundle files refer to https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/ezinstall/ppc/
 

@@ -1,8 +1,8 @@
 ---
 galaxy_info:
-  role_name: preconfig
+  role_name: oracle_createdb 
   author: Bhargavaram Akula 
-  description: Ansible role performs prerequisite AIX level tasks that are needed Oracle installation.
+  description: Ansible role creates a test database using dbca silent option.
   company: IBM
 
   license: Apache-2.0

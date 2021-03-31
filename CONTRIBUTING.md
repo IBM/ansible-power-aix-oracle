@@ -36,6 +36,16 @@ For a list of the maintainers, see the [MAINTAINERS.md](MAINTAINERS.md) page.
 ## Legal
 
 Each source file must include a license header for the Apache License 2.0
+ Using the SPDX format is the simplest approach.
+e.g.
+
+```
+/*
+Copyright <holder> All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+```
 
 We have tried to make it as easy as possible to make contributions. This
 applies to how we handle the legal aspects of contribution. We use the
