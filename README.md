@@ -5,13 +5,6 @@ This repository contains ansible **power_aix_oracle** collection which is used f
 
 This collection automates Oracle 19c database installation and creation steps.
 
-# IBM Power Systems - AIX
-
-IBM Power Systems is a family of enterprise servers that helps transform your organization by delivering industry leading resilience, scalability and accelerated performance for the most sensitive, mission critical workloads and next-generation AI and edge solutions. The Power platform also leverages open source technologies that enable you to run these workloads in a hybrid cloud environment with consistent tools, processes and skills.
-
-IBM Power Systems - AIX Oracle collection, as part of the broader offering of **Ansible Content for IBM Power Systems**, is available from Ansible Galaxy and has community support.
-
-
 # Description
 
 This playbook assumes the following:
