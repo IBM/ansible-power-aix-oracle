@@ -1,0 +1,8 @@
+- hosts: all
+  gather_facts: no
+  roles:
+    - role: yum_python_install 
+      vars:
+        download_dir: "~"
+        target_dir: "/tmp/.ansible.cpdir"
+      tags: bootstrap

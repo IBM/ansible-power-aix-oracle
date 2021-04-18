@@ -5,7 +5,7 @@ New AIX partition/VM
 None.
 
 ## Role Variables
-Variables are defined at ../defualts/main.yml
+Variables are defined at playbooks/vars/oracle_params.yml
 ## Dependencies
 
 None.

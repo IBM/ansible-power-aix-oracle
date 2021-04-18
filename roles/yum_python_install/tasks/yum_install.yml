@@ -130,3 +130,8 @@
   - name: Print status
     debug:
       msg: Bootstrap attempt of yum on {{ inventory_hostname }} has completed
+
+  - name: Check for existence of yum, fail if does not exists
+    raw: "rpm -q --quiet yum && echo true || echo false"
+    register: yum_exists
+    failed_when: not yum_exists.stdout is search("true")

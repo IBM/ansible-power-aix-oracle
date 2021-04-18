@@ -1,6 +1,6 @@
 {
  "collection_info": {
-  "namespace": "bhargava250",
+  "namespace": "ibm",
   "name": "power_aix_oracle",
   "version": "1.0.0",
   "authors": [
@@ -14,7 +14,7 @@
    "aix",
    "oracle"
   ],
-  "description": "Ansible content for installing oracle database 19c on IBM power systems AIX Operating system",
+  "description": "Ansible content for Installing Oracle Database 19c on IBM Power Systems running with AIX Operating system",
   "license": [
    "Apache-2.0"
   ],

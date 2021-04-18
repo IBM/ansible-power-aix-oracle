@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: Bhargavaram Akula 
-  description: Playbook and roles that can be used to install Oracle Single Instance Database 19c version on New AIX Systems.
+  description: Playbooks and roles that can be used to install Oracle Single Instance Database 19c version on New AIX Systems.
   company: IBM
 
   license: Apache License 2.0 

@@ -4,7 +4,7 @@
 None.
 
 ## Role Variables
-Variables are defined at roles/preconfig/defualts/main.yml
+Variables are defined at playbooks/vars/oracle_params.yml 
 ## Dependencies
 oracle_install
 

@@ -1,42 +1,37 @@
 # Copyright (c) IBM Corporation 2020
 ---
-- name: Fail if pkgtype not specified
-  fail:
-    msg: pkgtype not specified
-  when: not pkgtype is defined
-
 - name: Fail if download_dir not specified
   fail:
     msg: download_dir not specified
   when:
-    - pkgtype == "yum"
     - not download_dir is defined
 
 - name: Fail if target_dir not specified
   fail:
     msg: target_dir not specified
   when:
-    - pkgtype == "yum"
     - not target_dir is defined
 
 - name: Fail if rpm_src not specified
   fail:
     msg: rpm_src not specified
   when:
-    - pkgtype == "yum"
     - not rpm_src is defined
 
 - name: Fail if yum_src not specified
   fail:
     msg: yum_src not specified
   when:
-    - pkgtype == "yum"
     - not yum_src is defined
+
+- name: Check for existence of yum
+  raw: "rpm -q --quiet yum && echo true || echo false"
+  register: yum_exists
+  changed_when: not yum_exists.stdout is search("true")
 
 - name: Bootstrap yum
   include_tasks: "yum_install.yml"
-  when: pkgtype == "yum"
+  when: not yum_exists.stdout is search("true")
 
 - name: Bootstrap python
   include_tasks: "python_install.yml"
-  when: pkgtype == "python"

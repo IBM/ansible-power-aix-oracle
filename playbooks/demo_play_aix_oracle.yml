@@ -1,13 +1,6 @@
 - hosts: all
-  gather_facts: no
-  roles:
-    - role: power_aix_bootstrap
-      vars:
-        download_dir: "~"
-        target_dir: "/tmp/.ansible.cpdir"
-      tags: bootstrap
-- hosts: all
   gather_facts: yes 
+  vars_files: vars/oracle_params.yml
   roles:
     - role: preconfig
       tags: preconfig 
