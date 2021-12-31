@@ -1,7 +1,7 @@
 <!-- This should be the location of the title of the repository, normally the short name -->
 # AIX Oracle Collection - power_aix_oracle
 
-This repository contains ansible **power_aix_oracle** collection which is used for installing Oracle Single Instance database 19c on new AIX operating system and creates test database on AIX filesystem.
+This repository contains ansible **power_aix_oracle** collection which is used for installing Oracle Single Instance database 19c on new AIX operating system and creates test database on AIX filesystem and on Oracle ASM.
 
 This collection automates Oracle 19c database installation and creation steps.
 
@@ -70,7 +70,7 @@ b)	AIX server :
 
 ## 2.	Setup ssh Equivalence with managed host(AIX) server
     
-   If this is a first time using ssh, then you probably haven’t created your ssh keys. To check go to ~/.ssh and see if id_rsa file exists. If not you must create      the ssh keys.
+   If this is a first time using ssh, then you probably havent created your ssh keys. To check go to ~/.ssh and see if id_rsa file exists. If not you must create      the ssh keys.
   To create the ssh keys, run the following:
  ```
   $ ssh-keygen
@@ -118,12 +118,13 @@ b)	AIX server :
     https://www.oracle.com/database/technologies/oracle19c-aix-193000-downloads.html
 
  -	Modify the Oracle Binary location path variable "oracledbaix19c" in file "playbooks/vars/oracle_params.yml"
+ -      This collection supports creating oracle DB on AIX JFS and on Oracle ASM. For grid installation set the boolean variable "grid_asm_flag" to true in oracle_params.yml file
  -	Check other Oracle related parameters in file "playbooks/vars/oracle_params.yml", modify it based on your need
  -	Based on your environment update resolv.conf and netsvc.conf files at "roles/preconfig/files/"
  -	There should be atleast one free disk available other than rootvg for Oracle DB Installation and test database will get created on JFS filesystem. 
         Make sure disk header information is clean. You can check the header information using "lquerypv -h /dev/hdiskX". 
 	These free disks are used for staging oracle software binary and oracle datafiles.  
-	Minimum 40GB disk storage is needed for running this Oracle playbook.
+	Minimum 40GB disk storage is needed for running this Oracle playbook. For Grid Software and DB software you may need minimum 60G disk storage
 
 **###The collection contains below four roles**
  	
@@ -138,7 +139,7 @@ b)	AIX server :
 
 Inside power_aix_oracle collection go to "playbooks" directory
 
-Create/Update ansible.cfg and inventory files in collections "playbooks" directory. On managed host(AIX) "/tmp" filesystem is used for ansible remote temporary  activities. Since we need to transfer and extract oracle binary software files, the playbook will automatically set the /tmp filesystem size to 12G. "inventory" file should contain the list on managed hosts (AIX lpars).
+Create/Update ansible.cfg and inventory files in collections "playbooks" directory. On managed host(AIX) "/tmp" filesystem is used for ansible remote temporary  activities. Since we need to transfer and extract oracle binary software files, the playbook will automatically set the /tmp filesystem size to 8G. "inventory" file should contain the list on managed hosts (AIX lpars).
 
   Example ansible.cfg file 
 ```
@@ -240,37 +241,35 @@ https://github.com/IBM/ansible-power-aix
 	- Setting DNS order
 	- Checking /etc/hosts file on managed host and adding entry if needed
 	- Changes maxuproc
+        - Set OS paging size  
+        - Do VG disks and ASM disk validations 
 	- Checking and setting iocp attribute to "available". Rebooting the lpar if needed
 
 
 3)	**oracle_install**:
 	
-	- Detecting oracle version to install
-	- Listing available disks
-	- Creating volume group using all available disks
-	- Creating oracle groups and user
-	- Creating and mounting filesystem for oracle staging
-	- Updating .profile file with Oracle env details
-	- Generating oracle response file
-	- Create directories for ORACLE_HOME and ORACLE_BASE
-	- Changing the permissions
-	- Copying oracle Single instance source files
-	- Running rootpre.sh
-	- Install-home-db | Install Oracle Database Server
-	- Running orainstRoot.sh
-	- Running root.sh
-
+        - Detecting oracle version to install
+        - Create Oracle groups and user
+        - Creating volume group for ORACLE_HOME
+        - Creating and mounting filesystem for ORACLE_HOME
+        - Creating oracle installation directories
+        - If grid option selected install Standalone Grid Software
+        - Updating .profile file with Oracle env details
+        - Generating oracle response file and install Oracle DB Software
+        - Run root scripts
 
 4)	**oracle_createdb**:
 
         - Check /etc/oratab file for DB existence
-        - Create and mount filesystems for datafiles and redo logfiles
-        - Check and changing permissions of Filesystems
+        - Check /etc/oratab file for DB existence
+        - If grid option selected create database on ASM storage
+        - For JFS DB, create VG and mount filesystems
         - Generate Database creation template file
-        - Generate database creation script for  oracle version
+        - Generate database creation script
         - Creating database
-        - Creating and configuring oracle listener
+        - For JFS DB, Creating and configuring oracle listener
         - Check Oracle PMON background process status
+
 
 # Appendix
 

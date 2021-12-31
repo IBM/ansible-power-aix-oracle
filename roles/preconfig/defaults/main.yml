@@ -1,2 +1,5 @@
 ---
 # defaults file for preconfig
+
+aix_req_filesets: ['bos.adt.base', 'bos.adt.lib', 'bos.adt.libm','bos.perf.libperfstat', 'bos.perf.perfstat', 'bos.perf.proctools','rsct.basic.rte','rsct.compat.clients.rte','xlfrte.aix61','xlC.aix61.rte','xlC.rte']
+skip_grid_install: false

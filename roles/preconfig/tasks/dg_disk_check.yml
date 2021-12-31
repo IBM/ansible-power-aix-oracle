@@ -1,0 +1,8 @@
+- name: Check Disks PVID and VG
+  shell: /tmp/disk_validate.sh {{item}}  "None"
+- name: Check Disk header
+  command: lquerypv -h {{asm_disk_loc_prefix}}{{item}}
+  register: asm_dsk
+- fail:
+    msg: "Disk {{item}} is old or belong to ASM DG - disk header contains ASM info. If old disk clear header information using 'dd if=/dev/zero of=/dev/hdiskX bs=1024k count=100' and retry"
+  when: "'ORCLDISK' in asm_dsk.stdout"

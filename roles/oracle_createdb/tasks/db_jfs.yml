@@ -1,0 +1,71 @@
+#block:
+- name: creating volume group for DB
+  aix_lvg:
+    vg: "{{ora_data_vg}}"
+    pp_size: 4
+    vg_type: scalable
+    state: present
+    pvs: "{{item}}"
+  with_items:  "{{ora_data_vg_disk}}"
+  when : ora_data_vg != "rootvg"
+
+- name: create {{ora_data_fs}} filesystem
+  aix_filesystem:
+    filesystem:    "{{ ora_data_fs }}"
+    size: "{{ora_data_fs_size}}"
+    state: present
+    vg: "{{ora_data_vg}}"
+
+- name: mount {{ora_data_fs}}
+  aix_filesystem:
+    filesystem:   "{{ ora_data_fs  }}"
+    state: mounted
+  ignore_errors: yes
+
+- name: Checking permission of {{ora_data_fs}}
+  stat:
+    path: "{{ora_data_fs}}"
+  register: ora_dir
+
+- name: changing ownership to {{ora_user}} on {{ora_data_fs}}
+  file:
+    path: "{{ora_data_fs}}"
+    state: directory
+    recurse: yes
+    owner: "{{ora_user}}"
+    group: "{{ora_group}}"
+    mode: '0775'
+  when: ora_dir.stat.exists and ora_dir.stat.pw_name != ora_user
+
+- include: crfs.yml
+  with_items: "{{ ora_db_fs_list }}"
+  loop_control:
+    loop_var: item
+
+- name: Generating Database creation template file
+  template:
+    src: "../templates/sn.j2.{{ora_version}}"
+    dest: "/tmp/{{ora_sid}}.{{ansible_date_time.epoch}}.dbt"
+    owner: "{{ora_user}}"
+    group: "{{ora_group}}"
+    mode: '0774'
+
+- name:  generating database creation script for {{ora_version}} oracle version
+  template:
+    src: ../templates/createdb.19.mfs.ksh
+    dest: /tmp/createdb.19.mfs.ksh
+    owner: "{{ora_user}}"
+    group: "{{ora_group}}"
+    mode: '0744'
+
+- name: Creating database
+  shell: /tmp/createdb.19.mfs.ksh
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"
+
+- name: creating and configuring listener
+  shell: "{{ora_home}}/bin/netca -silent -responsefile {{ora_home}}/assistants/netca/netca.rsp"
+  become_method: su
+  become: yes
+  become_user:  "{{ora_user}}"  

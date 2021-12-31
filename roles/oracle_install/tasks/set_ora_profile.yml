@@ -1,0 +1,37 @@
+---
+# setting oracle user env profile
+
+- name: adding lines to {{ora_user}} .profile
+  lineinfile:
+    path: "/home/{{ora_user}}/.profile"
+    state: present
+    line: export TEMP=/tmp
+    create: yes
+
+- name: adding lines to {{ora_user}} .profile
+  lineinfile:
+    path: "/home/{{ora_user}}/.profile"
+    state: present
+    line: export TMPDIR=/tmp
+    create: yes
+
+- name: adding lines to {{ora_user}} .profile
+  lineinfile:
+    path: "/home/{{ora_user}}/.profile"
+    state: present
+    line: export TMP=/tmp
+    create: yes
+
+- name: adding lines to {{ora_user}} .profile
+  lineinfile:
+    path: "/home/{{ora_user}}/.profile"
+    state: present
+    line: export AIXTHREAD_SCOPE=S
+    create: yes
+
+- name: adding lines to {{ora_user}} .profile
+  lineinfile:
+    path: "/home/{{ora_user}}/.profile"
+    state: present
+    line: export ORACLE_HOME={{ora_home}}
+    create: yes

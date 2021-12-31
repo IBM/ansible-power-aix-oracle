@@ -3,7 +3,7 @@
 oracledbaix19c:
   - /home/ansible/zips/oraclesw19c/AIX.PPC64_193000_db_home.zip
 ora_user: oracle
-ora_user_uid: 1521
+ora_user_uid: 600 
 ora_group: dba
 ora_group_gid: 500
 ora_oinstall_group: oinstall
@@ -13,20 +13,48 @@ ora_oper_group_gid: 503
 ora_home_profile: /home/{{ora_user}}
 ora_install_group: oinstall
 ora_version: "19.0.0.0.0"
-ora_install_type: DB
+
+# Specify os paging size in MB
+os_paging_size: 16384              
+
 ora_sid: orcl 
 ora_pwd: Oracle4u
 ora_character_set: WE8MSWIN1252
-ora_fs: /oracle
+
+ora_sw_vg: oraswvg
+ora_sw_vg_disk:  ['hdisk1', 'hdisk2']
+ora_sw_fs: "/oracle"
+ora_sw_fs_size: 75G
+
+ora_inventory: "{{ora_sw_fs}}/oraInventory"
+ora_base: "{{ora_sw_fs}}/base"
+ora_home: "{{ora_sw_fs}}/product/{{ora_version}}/database"
+
+# When DB stage on JFS
+
+ora_data_vg: oradatavg
+ora_data_vg_disk:  ['hdisk4']
 ora_data_fs: /oradata 
-ora_data_fs_size: 1G
-ora_fs_size: 20G
-ora_fs_vg: oravg
-ora_inventory: "{{ora_fs}}/oraInventory"
-ora_base: "{{ora_fs}}/base"
-ora_home: "{{ora_fs}}/product/{{ora_version}}/database"
-code_base_dir: "{{ora_home}}"
+ora_data_fs_size: 5G
 ora_db_fs_list:
   - { fs_name: "/datafiles", size: "8G" }
   - { fs_name: "/controlfiles", size: "2G" }
   - { fs_name: "/redologs", size: "4G" }
+  
+# When DB lies on ASM
+
+grid_asm_flag: false
+oraclegridaix19c:
+  - /home/ansible/zips/oraclesw19c/AIX.PPC64_193000_grid_home.zip
+grid_ora_home: "{{ora_sw_fs}}/grid/home"
+
+# Grid reponsefile parameter
+
+asm_sys_password: oracle
+asm_diskgroup_name: DATA
+asm_diskgroup_redundancy: EXTERNAL
+asm_diskgroup_ausize: 4
+asm_diskgroup_disk: ['hdisk3', 'hdisk4', 'hdisk5']
+asm_disk_loc_prefix: "/dev/r"
+asm_diskdiscoverystring: "{{asm_disk_loc_prefix}}hdisk*"
+asm_asmsnmp_password: oracle

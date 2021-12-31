@@ -5,7 +5,7 @@
     filesystem:    "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
     size: "{{item.size}}"
     state: present
-    vg: "{{ora_fs_vg}}"
+    vg: "{{ora_data_vg}}"
 - name: mount {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}
   aix_filesystem:
     filesystem:   "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"

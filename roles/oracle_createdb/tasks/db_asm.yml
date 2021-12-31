@@ -1,0 +1,24 @@
+# DB on ASM tasks
+#
+
+- name: Generating Database creation template file
+  template:
+    src: "../templates/sn.asm.{{ora_version}}"
+    dest: "/tmp/{{ora_sid}}.{{ansible_date_time.epoch}}.dbt"
+    owner: "{{ora_user}}"
+    group: "{{ora_group}}"
+    mode: '0774'
+
+- name:  generating database creation script for {{ora_version}} oracle version
+  template:
+    src: ../templates/createdb.19.mfs.ksh
+    dest: /tmp/createdb.19.mfs.ksh
+    owner: "{{ora_user}}"
+    group: "{{ora_group}}"
+    mode: '0744'
+
+- name: Creating database
+  shell: /tmp/createdb.19.mfs.ksh
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"

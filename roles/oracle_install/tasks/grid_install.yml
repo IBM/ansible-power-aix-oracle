@@ -1,0 +1,73 @@
+---
+# Grid Installation tasks
+- debug:
+    msg: "Grid Base {{ora_base}} Grid_HOME {{grid_ora_home}}"
+
+- name: Preparing ASM disks
+  include_tasks: pre_asm_disks.yml
+  with_items: "{{asm_diskgroup_disk}}"
+  loop_control:
+    loop_var: item
+
+- name: Check for file gridSetup.sh
+  stat:
+    path: "{{grid_ora_home}}/gridSetup.sh"
+  register: ora_file
+
+- name: copying oracle grid source files
+  unarchive:
+    src: "{{item}}"
+    dest: "{{ grid_ora_home }}"
+    keep_newer: yes
+    owner: "{{ora_user}}"
+    group: "{{ora_oinstall_group}}"
+  loop:   "{{ oracle_grid_source_files |flatten(levels=1) }}"
+  when: not ora_file.stat.exists
+
+- name: Running rootpre.sh
+  shell: "{{grid_ora_home}}/clone/rootpre.sh"
+
+- name: Generating oracle grid response file Template file to /tmp/oracle_grid_install_rsp_file{{ansible_date_time.epoch}}.rsp
+  template:
+    src: ../templates/oracle19c_grid_install.rsp
+    dest: "/tmp/oracle_grid_install_rsp_file{{ansible_date_time.epoch}}.rsp"
+    owner: "{{ora_user}}"
+    group: "{{ora_group}}"
+    mode: '0644'
+
+- name: install-home-grid | Install Oracle Grid Standalone
+  shell: "{{grid_ora_home}}/gridSetup.sh -silent -ignorePrereqFailure -responseFile /tmp/oracle_grid_install_rsp_file{{ansible_date_time.epoch}}.rsp -waitforcompletion"
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: grid_install
+  failed_when: (grid_install.rc not in [0,6,254])
+# 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> Gridhome Already Installed
+- debug:
+    msg: "GridSetup.sh status :: {{grid_install}}"
+
+- name: Running orainstRoot.sh
+  shell:
+    cmd: "{{ora_inventory}}/orainstRoot.sh"
+
+- name: Running root.sh
+  shell:
+    cmd: "{{grid_ora_home}}/root.sh"
+  register: rootscript
+
+- debug:
+    msg: "root.sh output :: {{rootscript}}"
+  
+- name: Running ConfigTools
+  shell: "{{grid_ora_home}}/gridSetup.sh -silent -executeConfigTools -responseFile /tmp/oracle_grid_install_rsp_file{{ansible_date_time.epoch}}.rsp"
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: grid_configtools
+  
+- debug:
+    msg: "Grid ConfigTools Status :: {{grid_configtools}}"

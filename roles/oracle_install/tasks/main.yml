@@ -5,24 +5,13 @@
   set_fact:
     oracle_source_files: "{{oracledbaix19c}}"
   when: ora_version == "19.0.0.0.0"
-
-- name: listing available disks
-  shell: "lspv | awk '{ if ( $3==\"None\" ){ print $1 } }' "
-  register: freedisks
-
-- name: Fact
+  
+- name: detecting oracle grid version to install {{ ora_version }}
   set_fact:
-    pvlist: "{{freedisks.stdout_lines}}"
-
-- name: creating volume group
-  aix_lvg:
-    vg: "{{ora_fs_vg}}"
-    pp_size: 4
-    vg_type: scalable
-    state: present
-    pvs: "{{item}}"
-  with_items:  "{{pvlist}}"
-  when : ora_fs_vg != "rootvg"
+    oracle_grid_source_files: "{{oraclegridaix19c}}"
+  when: 
+    - ora_version == "19.0.0.0.0"
+    - grid_asm_flag
 
 - name: creating group {{ora_group}} with gid {{ora_group_gid}}
   group:
@@ -50,122 +39,72 @@
     append: yes
     uid: "{{ora_user_uid}}"
 
-- name: create /oracle  create fs
-  aix_filesystem:
-    filesystem:    "{{ ora_fs }}"
-    size: "{{ora_fs_size}}"
+- name: creating volume group for OH
+  aix_lvg:
+    vg: "{{ora_sw_vg}}"
+    pp_size: 4
+    vg_type: scalable
     state: present
-    vg: "{{ora_fs_vg}}"
+    pvs: "{{item}}"
+  with_items:  "{{ora_sw_vg_disk}}"
+  when : ora_sw_vg != "rootvg"
 
-- name: mount /oracle
+- name: create File System for OH
   aix_filesystem:
-    filesystem:   "{{ ora_fs  }}"
+    filesystem:    "{{ ora_sw_fs }}"
+    size: "{{ora_sw_fs_size}}"
+    state: present
+    vg: "{{ora_sw_vg}}"
+
+- name: mount File System for OH
+  aix_filesystem:
+    filesystem:   "{{ ora_sw_fs }}"
     state: mounted
   ignore_errors: yes
+  
+- name: Checking permission of {{ora_sw_fs}}
+  stat:
+    path: "{{ora_sw_fs}}"
+  register: ora_dir 
 
-- name: adding lines to {{ora_user}} .profile
-  lineinfile:
-    path: "/home/{{ora_user}}/.profile"
-    state: present
-    line: export TEMP=/tmp
-    create: yes
+- name: creating Oracle Grid Home directory
+  file:
+    path: "{{grid_ora_home}}"
+    state: directory
+    mode: '0755'
+  when: grid_asm_flag
 
-- name: adding lines to {{ora_user}} .profile
-  lineinfile:
-    path: "/home/{{ora_user}}/.profile"
-    state: present
-    line: export TMPDIR=/tmp
-    create: yes
-
-- name: adding lines to {{ora_user}} .profile
-  lineinfile:
-    path: "/home/{{ora_user}}/.profile"
-    state: present
-    line: export TMP=/tmp
-    create: yes
-
-- name: adding lines to {{ora_user}} .profile
-  lineinfile:
-    path: "/home/{{ora_user}}/.profile"
-    state: present
-    line: export AIXTHREAD_SCOPE=S
-    create: yes
-
-- name: adding lines to {{ora_user}} .profile
-  lineinfile:
-    path: "/home/{{ora_user}}/.profile"
-    state: present
-    line: export ORACLE_HOME={{ora_home}}
-    create: yes
-
-- name: adding lines to {{ora_user}} .profile
-  lineinfile:
-    path: "/home/{{ora_user}}/.profile"
-    state: present
-    line: export ORACLE_BASE={{ora_fs}}
-    create: yes
-
-- name: adding lines to {{ora_user}} .profile
-  lineinfile:
-    path: "/home/{{ora_user}}/.profile"
-    state: present
-    line: export PATH=$PATH:{{ora_home}}/bin
-    create: yes
-
-- name: adding lines to {{ora_user}} .profile
-  lineinfile:
-    path: "/home/{{ora_user}}/.profile"
-    state: present
-    line: export PATH=$PATH:{{ora_home}}/OPatch
-    create: yes
-
-- name: adding lines to {{ora_user}} .profile
-  lineinfile:
-    path: "/home/{{ora_user}}/.profile"
-    state: present
-    line: export ORACLE_SID={{ora_sid}}
-    create: yes
-
-- name: Generating oracle response file Template a file to /etc/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp
-  template:
-    src: ../templates/oracle19c_install.rsp
-    dest: "/tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp"
-    owner: "{{ora_user}}"
-    group: "{{ora_group}}"
-    mode: '0644'
-  when: ora_version == '19.0.0.0.0'
-
-- debug:
-    msg: "{{ora_base}} {{ora_home}}"
-
-- name: creating Oracle Software Home directory
+- name: creating Oracle DB Home directory
   file:
     path: "{{ora_home}}"
     state: directory
     mode: '0755'
-  when: ora_version == '19.0.0.0.0'
 
 - name: creating Oracle Base directory
   file:
     path: "{{ora_base}}"
     state: directory
     mode: '0755'
-  when: ora_version == '19.0.0.0.0'
 
-- name: Checking permission of {{ora_fs}}
-  stat:
-    path: "{{ora_fs}}"
-  register: ora_dir 
-
-- name: changing ownership to {{ora_user}} on {{ora_fs}}
+- name: changing ownership to {{ora_user}} on {{ora_sw_fs}}
   file:
-    path: "{{ora_fs}}"
+    path: "{{ora_sw_fs}}"
     state: directory
     recurse: yes
     owner: "{{ora_user}}"
     group: "{{ora_group}}"
     mode: '0774'
   when: ora_dir.stat.exists and ora_dir.stat.pw_name != ora_user
+
+- name: Grid Installation 
+  include_tasks: grid_install.yml
+  when: grid_asm_flag
+
+- debug:
+    msg: "Starting to Install DB home"
+
+- name: Set {{ora_user}} user env profile
+  include_tasks: set_ora_profile.yml
 
 - name: Check for file runInstaller
   stat:
@@ -175,28 +114,37 @@
 - name: copying oracle Single instance source files
   unarchive:
     src: "{{item}}"
-    dest: "{{ code_base_dir }}"
+    dest: "{{ora_home}}"
     keep_newer: yes
     owner: "{{ora_user}}"
     group: "{{ora_oinstall_group}}"
   loop:   "{{ oracle_source_files |flatten(levels=1) }}"
   when: not ora_file.stat.exists
 
+- name: Generating oracle response file Template a file to /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp
+  template:
+    src: ../templates/oracle19c_install.rsp
+    dest: "/tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp"
+    owner: "{{ora_user}}"
+    group: "{{ora_group}}"
+    mode: '0644'
+
 - name: Running rootpre.sh
-  shell: "{{code_base_dir}}/clone/rootpre.sh"
-  when: ora_version == '19.0.0.0.0'
+  shell: "{{ora_home}}/clone/rootpre.sh"
 
 - name: install-home-db | Install Oracle Database Server
-  shell: "{{code_base_dir}}/runInstaller -responseFile /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp -ignorePrereqFailure -silent -waitforcompletion"
+  shell: "{{ora_home}}/runInstaller -responseFile /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp -ignorePrereqFailure -silent -waitforcompletion"
   become: yes
   become_method: su
   become_user: "{{ora_user}}"
   environment:
     SKIP_ROOTPRE: "TRUE"
   register: rdbms_install
-  when: ora_version == '19.0.0.0.0'
   failed_when: (rdbms_install.rc not in [0,6,254])
 # 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> DBhome Already Installed
+
+- debug:
+    msg: "runInstaller output :: {{rdbms_install}}"
 
 - name: Running orainstRoot.sh
   shell:
@@ -204,4 +152,8 @@
 
 - name: Running root.sh
   shell:
-    cmd: "{{ora_home}}/root.sh -silent"
+    cmd: "{{ora_home}}/root.sh"
+  register: rootscript
+
+- debug:
+    msg: "root.sh output :: {{rootscript}}"

@@ -32,10 +32,10 @@
   aix_devices:
     device: all
 
-- name: Changes /tmp to 12G size, holds ansible temp files
+- name: Changes /tmp to 8G size, holds ansible temp files
   aix_filesystem:
     filesystem: /tmp
-    size: 12G
+    size: 8G
     state: present
 
 - name: Changing ulimits
@@ -107,6 +107,53 @@
     device: sys0
     attributes:
       maxuproc: '16384'
+- name: Copy paging_space script
+  copy:
+    src: ../files/increase_paging_space.sh
+    dest: /tmp/increase_paging_space.sh
+    mode: '0770'
+
+- name: executing system paging_space script
+  shell : /tmp/increase_paging_space.sh {{os_paging_size}}
+  register: page_out
+
+- debug:
+    msg: "{{page_out}}"
+
+- name: Copy disk_validate script
+  copy:
+    src: ../files/disk_validate.sh
+    dest: /tmp/disk_validate.sh
+    mode: '0770'
+
+- name: Check Oracle Home VG disks
+  shell: /tmp/disk_validate.sh {{item}} {{ora_sw_vg}}
+  loop: "{{ora_sw_vg_disk}}"
+
+- name: Check for Ora Inventory existence
+  stat:
+    path: "{{ora_inventory}}/ContentsXML/inventory.xml"
+  register: ora_file
+
+- name: Check Ora Inventory
+  block:
+    - name: Get Inventory Content
+      command: cat {{ora_inventory}}/ContentsXML/inventory.xml
+      register: inventory_output
+    - name:
+      set_fact:
+        skip_grid_install: true
+      when: grid_ora_home in inventory_output.stdout
+  when: ora_file.stat.exists
+
+- name: Check ASM DG disk
+  include: dg_disk_check.yml
+  with_items: "{{asm_diskgroup_disk}}"
+  loop_control:
+    loop_var: item
+  when:
+    - grid_asm_flag
+    - not skip_grid_install
 
 - name: listing iocp attribute to check if reboot is required
   shell: "lsattr -El iocp0 -a autoconfig -O"
@@ -123,6 +170,12 @@
 - name: setting iocp to autconfig available
   shell: chdev -l iocp0 -P -a autoconfig=available
   when: attr  == "defined"
+
+- include: check_fileset.yml
+  with_items: "{{aix_req_filesets}}"
+  loop_control:
+    loop_var: item
+  when: grid_asm_flag
 
 - name: generating system reboot script
   copy:
@@ -142,4 +195,3 @@
     sleep: 20
     connect_timeout: 10
   when: attr  == "defined"
-
