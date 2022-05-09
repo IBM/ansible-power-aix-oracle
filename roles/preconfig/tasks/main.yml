@@ -7,10 +7,10 @@
 
 # rootvg partition size is 250M, /var size must be multiple of 250M
 - name: Expand /var target directory +500M
-  aix_filesystem:
+  ibm.power_aix.filesystem:
     filesystem: /var
-    size: +500M
     state: present
+    attributes: size=+500M
   when: var_fs_size_out.stdout < '500'
 
 - name: Check current /opt size
@@ -19,33 +19,60 @@
 
 # rootvg partition size is 250M, /opt size must be multiple of 250M
 - name: Expand /opt target directory +750M
-  aix_filesystem:
+  ibm.power_aix.filesystem:
     filesystem: /opt
-    size: +750M
     state: present
+    attributes: size=+750M
   when: opt_fs_size_out.stdout < '750'
 
 - name: Running cfgmgr to discover new devices
   shell: cfgmgr
 
 - name: Running cfgmgr to discover new devices
-  aix_devices:
+  ibm.power_aix.devices:
     device: all
 
 - name: Changes /tmp to 8G size, holds ansible temp files
-  aix_filesystem:
+  ibm.power_aix.filesystem:
     filesystem: /tmp
-    size: 8G
     state: present
+    attributes: size=8G
 
 - name: Changing ulimits
   raw: 'chsec -f /etc/security/limits -s "default" -a fsize=-1 -a core=-1 -a cpu=-1 -a data=-1 -a rss=-1 -a stack=-1 -a nofiles=-1'
 
-- name : Installing zip, unzip, GNUtar using yum - prerequisite power_aix collection download it from ansible galaxy
+- name: Verify the host OS level
+  raw: "/usr/bin/oslevel  | /usr/bin/awk -F '.' ' { print $1 $2 }'"
+  register: os_level
+  changed_when: false
+
+- name: Set a aix73 flag
+  set_fact:
+     aix73: false 
+
+- name: Set a aix73 flag
+  set_fact:
+     aix73: true
+  when: (os_level.stdout_lines[0] | int) >= 73
+
+- name: Use dnf for installing packages if host OS is >73
+  dnf:
+    name:
+      - unzip
+      - zip
+      - tar
+    state: latest
+  environment:
+    PATH: "/usr/bin:/usr/sbin/:/opt/freeware/bin"
+  ignore_errors: yes
+  when: aix73
+
+- name : AIX version <73  using yum for installing packages 
   yum:
     name: unzip, zip, tar
     state: latest
   ignore_errors: yes
+  when: not aix73
 
 - name: setting DNS
   copy:
@@ -103,10 +130,8 @@
     - IP_present.rc == 1
 
 - name: Changes maxuproc
-  aix_devices:
-    device: sys0
-    attributes:
-      maxuproc: '16384'
+  command: /usr/sbin/chdev -l sys0 -a maxuproc="16384"
+
 - name: Copy paging_space script
   copy:
     src: ../files/increase_paging_space.sh
@@ -147,7 +172,7 @@
   when: ora_file.stat.exists
 
 - name: Check ASM DG disk
-  include: dg_disk_check.yml
+  include_tasks: dg_disk_check.yml
   with_items: "{{asm_diskgroup_disk}}"
   loop_control:
     loop_var: item
@@ -171,27 +196,13 @@
   shell: chdev -l iocp0 -P -a autoconfig=available
   when: attr  == "defined"
 
-- include: check_fileset.yml
+- include_tasks: check_fileset.yml
   with_items: "{{aix_req_filesets}}"
   loop_control:
     loop_var: item
   when: grid_asm_flag
 
-- name: generating system reboot script
-  copy:
-    src: ../files/rebootscript.sh
-    dest: /tmp/rebootscript.sh
-    mode: '0770'
-  when: attr  == "defined"
-
-- name: executing system reboot script
-  shell : "/tmp/rebootscript.sh"
-  when: attr  == "defined"
-
-- name: Wait 600 seconds, but only start checking after 120 seconds
-  wait_for_connection:
-    delay: 120
-    timeout: 600
-    sleep: 20
-    connect_timeout: 10
+- name: Reboot the machine to set tunables
+  ibm.power_aix.reboot:
+    test_command: uptime
   when: attr  == "defined"

@@ -12,17 +12,17 @@ ora_oper_group: oper
 ora_oper_group_gid: 503
 ora_home_profile: /home/{{ora_user}}
 ora_install_group: oinstall
-ora_version: "19.0.0.0.0"
+ora_version: "19.3.0.0.0"
 
 # Specify os paging size in MB
-os_paging_size: 16384              
+os_paging_size: 8024              
 
 ora_sid: orcl 
 ora_pwd: Oracle4u
 ora_character_set: WE8MSWIN1252
 
 ora_sw_vg: oraswvg
-ora_sw_vg_disk:  ['hdisk1', 'hdisk2']
+ora_sw_vg_disk:  ['hdisk1','hdisk2']
 ora_sw_fs: "/oracle"
 ora_sw_fs_size: 75G
 
@@ -33,7 +33,7 @@ ora_home: "{{ora_sw_fs}}/product/{{ora_version}}/database"
 # When DB stage on JFS
 
 ora_data_vg: oradatavg
-ora_data_vg_disk:  ['hdisk4']
+ora_data_vg_disk:  ['hdisk3','hdisk4']
 ora_data_fs: /oradata 
 ora_data_fs_size: 5G
 ora_db_fs_list:
@@ -43,7 +43,7 @@ ora_db_fs_list:
   
 # When DB lies on ASM
 
-grid_asm_flag: false
+grid_asm_flag: false 
 oraclegridaix19c:
   - /home/ansible/zips/oraclesw19c/AIX.PPC64_193000_grid_home.zip
 grid_ora_home: "{{ora_sw_fs}}/grid/home"

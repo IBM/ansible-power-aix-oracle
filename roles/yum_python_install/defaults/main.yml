@@ -1,5 +1,0 @@
----
-# Copyright (c) IBM Corporation 2021
-rpm_src: "rpm.rte"
-yum_src: "yum_bundle.tar"
-

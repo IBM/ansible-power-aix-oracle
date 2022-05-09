@@ -1,15 +1,16 @@
 #block:
 
 - name: create {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}} filesystem
-  aix_filesystem:
+  ibm.power_aix.filesystem:
     filesystem:    "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
-    size: "{{item.size}}"
+    attributes: "size={{item.size}}"
     state: present
     vg: "{{ora_data_vg}}"
-- name: mount {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}
-  aix_filesystem:
-    filesystem:   "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
-    state: mounted
+    auto_mount: True
+- name: Mount Oracle FS
+  ibm.power_aix.mount:
+    mount_dir: "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
+    state: mount
   ignore_errors: yes
 - name: Checking permission of {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}
   stat:

@@ -4,13 +4,13 @@
 - name: detecting oracle version to install {{ ora_version }}
   set_fact:
     oracle_source_files: "{{oracledbaix19c}}"
-  when: ora_version == "19.0.0.0.0"
+  when: ora_version == "19.3.0.0.0"
   
 - name: detecting oracle grid version to install {{ ora_version }}
   set_fact:
     oracle_grid_source_files: "{{oraclegridaix19c}}"
   when: 
-    - ora_version == "19.0.0.0.0"
+    - ora_version == "19.3.0.0.0"
     - grid_asm_flag
 
 - name: creating group {{ora_group}} with gid {{ora_group_gid}}
@@ -40,26 +40,26 @@
     uid: "{{ora_user_uid}}"
 
 - name: creating volume group for OH
-  aix_lvg:
-    vg: "{{ora_sw_vg}}"
+  ibm.power_aix.lvg:
+    vg_name: "{{ora_sw_vg}}"
     pp_size: 4
     vg_type: scalable
     state: present
-    pvs: "{{item}}"
-  with_items:  "{{ora_sw_vg_disk}}"
+    pvs: "{{ora_sw_vg_disk}}"
   when : ora_sw_vg != "rootvg"
 
 - name: create File System for OH
-  aix_filesystem:
+  ibm.power_aix.filesystem:
     filesystem:    "{{ ora_sw_fs }}"
-    size: "{{ora_sw_fs_size}}"
     state: present
+    attributes: "size={{ora_sw_fs_size}}"
     vg: "{{ora_sw_vg}}"
+    auto_mount: True
 
 - name: mount File System for OH
-  aix_filesystem:
-    filesystem:   "{{ ora_sw_fs }}"
-    state: mounted
+  ibm.power_aix.mount: 
+    mount_dir: "{{ ora_sw_fs }}"
+    state: mount
   ignore_errors: yes
   
 - name: Checking permission of {{ora_sw_fs}}

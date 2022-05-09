@@ -1,7 +1,7 @@
 #block:
 - name: creating volume group for DB
-  aix_lvg:
-    vg: "{{ora_data_vg}}"
+  ibm.power_aix.lvg:
+    vg_name: "{{ora_data_vg}}"
     pp_size: 4
     vg_type: scalable
     state: present
@@ -10,16 +10,17 @@
   when : ora_data_vg != "rootvg"
 
 - name: create {{ora_data_fs}} filesystem
-  aix_filesystem:
+  ibm.power_aix.filesystem:
     filesystem:    "{{ ora_data_fs }}"
-    size: "{{ora_data_fs_size}}"
+    attributes: "size={{ora_data_fs_size}}"
     state: present
     vg: "{{ora_data_vg}}"
+    auto_mount: True
 
 - name: mount {{ora_data_fs}}
-  aix_filesystem:
-    filesystem:   "{{ ora_data_fs  }}"
-    state: mounted
+  ibm.power_aix.mount:
+    mount_dir:   "{{ ora_data_fs  }}"
+    state: mount
   ignore_errors: yes
 
 - name: Checking permission of {{ora_data_fs}}
@@ -37,7 +38,7 @@
     mode: '0775'
   when: ora_dir.stat.exists and ora_dir.stat.pw_name != ora_user
 
-- include: crfs.yml
+- include_tasks: crfs.yml
   with_items: "{{ ora_db_fs_list }}"
   loop_control:
     loop_var: item

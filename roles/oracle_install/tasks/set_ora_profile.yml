@@ -35,3 +35,10 @@
     state: present
     line: export ORACLE_HOME={{ora_home}}
     create: yes
+
+- name: adding lines to {{ora_user}} .profile
+  lineinfile:
+    path: "/home/{{ora_user}}/.profile"
+    state: present
+    line: export ORACLE_SID={{ora_sid}}
+    create: yes
