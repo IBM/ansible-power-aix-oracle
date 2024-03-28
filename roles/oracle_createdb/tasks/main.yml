@@ -7,10 +7,21 @@
   register: db_check
   failed_when: db_check.rc > 2
 
+
+- name: changing permission to {{ora_base}}/admin
+  file:
+    path: "{{ora_base}}/admin"
+    state: directory
+    recurse: yes
+    owner: "{{ora_user}}"
+    group: "{{ora_oinstall_group}}"
+    mode: '0775'
+
 - name: DB Check
   fail:
     msg: "DB {{ora_sid}} is already created"
   when: db_check.stdout | length > 0
+
 
 - name: DB on ASM Storage
   include_tasks: db_asm.yml
@@ -29,6 +40,12 @@
   shell: "ps -ef|grep ora_pmon_{{ora_sid}}|grep -v grep"
   register: process_check
   failed_when: process_check.rc>1
+
+- name: Add TNS Entry to tnsnames.ora
+  lineinfile:
+    path: "{{ora_home}}/network/admin/tnsnames.ora"
+    line: "{{ ora_sid }} = (DESCRIPTION = (ADDRESS_LIST = (ADDRESS = (PROTOCOL = TCP)(HOST = {{ inventory_hostname }})(PORT = 1521))) (CONNECT_DATA = (SERVER = DEDICATED) (SERVICE_NAME = {{ ora_sid }})))"
+  when: db_check.stdout | length > 0
 
 - debug:
     var: process_check

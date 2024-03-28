@@ -1,12 +1,21 @@
 #block:
 
+
+- name: Check whether filesystem is mounted
+  stat:
+    path: "{{ ora_data_fs }}/{{ ora_sid }}{{ item.fs_name }}"
+  register: fs_stat
+
+
 - name: create {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}} filesystem
   ibm.power_aix.filesystem:
     filesystem:    "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
-    attributes: "size={{item.size}}"
+    attributes: "size={{item.size}},agblksize={{ item.bs | default(4096) }}"
     state: present
     vg: "{{ora_data_vg}}"
     auto_mount: True
+  when: not fs_stat.stat.exists
+
 - name: Mount Oracle FS
   ibm.power_aix.mount:
     mount_dir: "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"

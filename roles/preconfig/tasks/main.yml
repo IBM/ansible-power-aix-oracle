@@ -1,8 +1,13 @@
 # Copyright (c) IBM Corporation 2021
 # tasks file for AIX config for Oracle Single Instance DB 
 # chfs fails if the target size is the same as the current!
+
+
+- name: Run initialization tasks
+  include_tasks: init.yml
+
 - name: Check current /var size
-  raw: df -m /var | awk '$0 !~ /Filesystem/ {printf "%d", $2}'
+  ansible.builtin.raw: df -m /var | awk '$0 !~ /Filesystem/ {printf "%d", $2}'
   register: var_fs_size_out
 
 # rootvg partition size is 250M, /var size must be multiple of 250M
@@ -14,7 +19,7 @@
   when: var_fs_size_out.stdout < '500'
 
 - name: Check current /opt size
-  raw: df -m /opt | awk '$0 !~ /Filesystem/ {printf "%d", $2}'
+  ansible.builtin.raw: df -m /opt | awk '$0 !~ /Filesystem/ {printf "%d", $2}'
   register: opt_fs_size_out
 
 # rootvg partition size is 250M, /opt size must be multiple of 250M
@@ -26,7 +31,7 @@
   when: opt_fs_size_out.stdout < '750'
 
 - name: Running cfgmgr to discover new devices
-  shell: cfgmgr
+  ansible.builtin.shell: cfgmgr
 
 - name: Running cfgmgr to discover new devices
   ibm.power_aix.devices:
@@ -38,44 +43,85 @@
     state: present
     attributes: size=8G
 
+
+- name: Check if limits.bak file exists
+  ansible.builtin.stat:
+    path: "{{backup_dir}}/limits.bak"
+  register: backup_file
+
+- name: Take backup of limits if it doesn't exist
+  ansible.builtin.copy:
+    src: /etc/security/limits
+    dest: "{{backup_dir}}/limits.bak"
+    remote_src: true
+  when: not backup_file.stat.exists
+
+
 - name: Changing ulimits
-  raw: 'chsec -f /etc/security/limits -s "default" -a fsize=-1 -a core=-1 -a cpu=-1 -a data=-1 -a rss=-1 -a stack=-1 -a nofiles=-1'
+  ansible.builtin.raw: 'chsec -f /etc/security/limits -s "default" -a fsize=-1 -a core=-1 -a cpu=-1 -a data=-1 -a rss=-1 -a stack=-1 -a nofiles=-1'
 
 - name: Verify the host OS level
-  raw: "/usr/bin/oslevel  | /usr/bin/awk -F '.' ' { print $1 $2 }'"
+  ansible.builtin.raw: "/usr/bin/oslevel  | /usr/bin/awk -F '.' ' { print $1 $2 }'"
   register: os_level
   changed_when: false
 
-- name: Set a aix73 flag
-  set_fact:
-     aix73: false 
+#- name: Set a aix73 flag
+#  ansible.builtin.set_fact:
+#     aix73: false 
 
-- name: Set a aix73 flag
-  set_fact:
-     aix73: true
-  when: (os_level.stdout_lines[0] | int) >= 73
+#- name: Set a aix73 flag
+#  ansible.builtin.set_fact:
+#     aix73: true
+#  when: (os_level.stdout_lines[0] | int) >= 73
 
-- name: Use dnf for installing packages if host OS is >73
-  dnf:
-    name:
-      - unzip
-      - zip
-      - tar
-    state: latest
+- name: Check Package
+  ansible.builtin.shell: "lslpp -Lc | grep -i {{ item }}"
+  with_items: "{{ preconfig.linux.tools + preconfig.linux.optional_tools }}"
+  register: checkrpm
+  ignore_errors: True
+      
+- name: make rpm list
+  ansible.builtin.set_fact:
+   rpm_list: |-
+     [
+     {% for rp in checkrpm.results %}
+        {% if rp.rc != 0 %}
+           "{{rp.item}}",
+        {% endif %}
+     {% endfor %}
+     ]
+
+- name: Use dnf for installing rpm packages 
+  ansible.builtin.dnf:
+    name: "{{ item }}"
+    state: present
+    use_backend: dnf4
   environment:
     PATH: "/usr/bin:/usr/sbin/:/opt/freeware/bin"
+  register: tools_out
   ignore_errors: yes
-  when: aix73
+  when: rpm_list is defined
+  failed_when:
+     - (preconfig.linux.tools is not defined) or (tools_out.rc != 0)
+  with_items:
+     - "{{ rpm_list }}"
 
-- name : AIX version <73  using yum for installing packages 
-  yum:
-    name: unzip, zip, tar
-    state: latest
-  ignore_errors: yes
-  when: not aix73
+#- name : AIX version <73  using yum for installing packages 
+#  ansible.builtin.yum:
+#    name: "{{ item }}"
+#    state: latest
+#  environment:
+#    PATH: "/usr/bin:/usr/sbin/:/opt/freeware/bin"
+#  register: tools_out
+#  ignore_errors: yes
+#  when: not aix73 and rpm_list is defined
+#  failed_when:
+#     - (preconfig.linux.tools is not defined) or (tools_out.rc != 0)
+#  with_items:
+#     - "{{ rpm_list }}"
 
 - name: setting DNS
-  copy:
+  ansible.builtin.copy:
     src: ../files/resolv.conf
     dest: /etc/resolv.conf
     mode : '0664'
@@ -83,7 +129,7 @@
     group: system 
  
 - name: setting DNS order
-  copy:
+  ansible.builtin.copy:
     src: ../files/netsvc.conf
     dest: /etc/netsvc.conf
     mode : '0664'
@@ -91,33 +137,33 @@
     group: system
 
 - name: Checking /etc/hosts for local IP
-  command: "grep {{ansible_default_ipv4.address}} /etc/hosts"
+  ansible.builtin.command: "grep {{ansible_default_ipv4.address}} /etc/hosts"
   register: IP_present
   when: ansible_default_ipv4 is defined
   changed_when: IP_present.rc == 1
   failed_when: IP_present.rc > 2
 - block:
   - name: Getting real hostname
-    command: hostname
+    ansible.builtin.command: hostname
     register: real_hostname
-  - debug:
+  - ansible.builtin.debug:
       msg: real_hostname "{{ real_hostname.stdout }}" ansible_hostname  "{{ ansible_hostname }}"
   - name: create hostname_line
-    set_fact:
+    ansible.builtin.set_fact:
       hostname_line: "{{ ansible_hostname }} {{ real_hostname.stdout }}"
     when:
       - real_hostname.stdout is defined
       - real_hostname.stdout != ansible_hostname
   - name: create hostname_line
-    set_fact:
+    ansible.builtin.set_fact:
       hostname_line: "{{ ansible_hostname }} "
     when:
       - real_hostname.stdout is defined
       - real_hostname.stdout == ansible_hostname
   - name: setting uname
-    shell: uname -S  "{{ ansible_hostname }} "
+    ansible.builtin.shell: uname -S  "{{ ansible_hostname }} "
   - name: Resolve hostname in /etc/hosts
-    lineinfile:
+    ansible.builtin.lineinfile:
       dest: '/etc/hosts'
       regexp: '^{{ ansible_default_ipv4.address }}.*'
       insertafter: '^127.0.0.1 .*localhost*'
@@ -130,49 +176,49 @@
     - IP_present.rc == 1
 
 - name: Changes maxuproc
-  command: /usr/sbin/chdev -l sys0 -a maxuproc="16384"
+  ansible.builtin.command: /usr/sbin/chdev -l sys0 -a maxuproc="16384"
 
 - name: Copy paging_space script
-  copy:
+  ansible.builtin.copy:
     src: ../files/increase_paging_space.sh
     dest: /tmp/increase_paging_space.sh
     mode: '0770'
 
 - name: executing system paging_space script
-  shell : /tmp/increase_paging_space.sh {{os_paging_size}}
+  ansible.builtin.shell : /tmp/increase_paging_space.sh {{os_paging_size}}
   register: page_out
 
-- debug:
-    msg: "{{page_out}}"
+#- ansible.builtin.debug:
+#    msg: "{{page_out}}"
 
 - name: Copy disk_validate script
-  copy:
+  ansible.builtin.copy:
     src: ../files/disk_validate.sh
     dest: /tmp/disk_validate.sh
     mode: '0770'
 
 - name: Check Oracle Home VG disks
-  shell: /tmp/disk_validate.sh {{item}} {{ora_sw_vg}}
+  ansible.builtin.shell: /tmp/disk_validate.sh {{item}} {{ora_sw_vg}}
   loop: "{{ora_sw_vg_disk}}"
 
 - name: Check for Ora Inventory existence
-  stat:
+  ansible.builtin.stat:
     path: "{{ora_inventory}}/ContentsXML/inventory.xml"
   register: ora_file
 
 - name: Check Ora Inventory
   block:
     - name: Get Inventory Content
-      command: cat {{ora_inventory}}/ContentsXML/inventory.xml
+      ansible.builtin.command: cat {{ora_inventory}}/ContentsXML/inventory.xml
       register: inventory_output
     - name:
-      set_fact:
+      ansible.builtin.set_fact:
         skip_grid_install: true
       when: grid_ora_home in inventory_output.stdout
   when: ora_file.stat.exists
 
 - name: Check ASM DG disk
-  include_tasks: dg_disk_check.yml
+  ansible.builtin.include_tasks: dg_disk_check.yml
   with_items: "{{asm_diskgroup_disk}}"
   loop_control:
     loop_var: item
@@ -181,22 +227,36 @@
     - not skip_grid_install
 
 - name: listing iocp attribute to check if reboot is required
-  shell: "lsattr -El iocp0 -a autoconfig -O"
+  ansible.builtin.shell: "lsattr -El iocp0 -a autoconfig -O"
   register : iocp0
 
 - name: value of iocp0
-  debug:
+  ansible.builtin.debug:
     msg : "{{iocp0.stdout_lines[1]}}"
 
 - name: setiing var
-  set_fact:
+  ansible.builtin.set_fact:
     attr: "{{iocp0.stdout_lines[1]}}"
 
 - name: setting iocp to autconfig available
-  shell: chdev -l iocp0 -P -a autoconfig=available
+  ansible.builtin.shell: chdev -l iocp0 -P -a autoconfig=available
   when: attr  == "defined"
 
-- include_tasks: check_fileset.yml
+- name: Creating NFS filesystem for filesets.
+  ibm.power_aix.filesystem:
+    device: "{{nfsfilesetExportDir}}"
+    nfs_server: "{{nfsfilesetServerIP}}"
+    filesystem: "{{nfsfilesetMountPoint}}"
+    state: present
+  become: yes
+  become_user: root
+  when: 
+    - grid_asm_flag
+    - nfsfilesetMountPoint is defined and nfsfilesetMountPoint | default('') != None and nfsfilesetMountPoint | default('') != ''
+    - nfsfilesetExportDir is defined and nfsfilesetExportDir | default('') != None and nfsfilesetExportDir | default('') != ''
+    - nfsfilesetServerIP is defined and nfsfilesetServerIP | default('') != None and nfsfilesetServerIP | default('') != ''
+
+- ansible.builtin.include_tasks: check_and_install_fileset.yml
   with_items: "{{aix_req_filesets}}"
   loop_control:
     loop_var: item

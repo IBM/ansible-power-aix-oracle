@@ -10,10 +10,10 @@ function show_usage_and_exit
 
 disk=$1
 vg=$2
-disk_state=`lsdev|fgrep $disk| awk '{print $2}'`
+disk_state=`lsdev|fgrep "$disk "| awk '{print $2}'`
 if [[ "$disk_state" = "Available" ]] ; then
-    disk_vg1=`lspv|fgrep $disk | awk '{print $2}'`
-    disk_vg2=`lspv|fgrep $disk | awk '{print $3}'`
+    disk_vg1=`lspv|fgrep "$disk "| awk '{print $2}'`
+    disk_vg2=`lspv|fgrep "$disk "| awk '{print $3}'`
     if [[ "$disk_vg1" = "none" && "$disk_vg2" = "None"  ]] ; then
            echo "Disk $disk is clean"
            exit 0

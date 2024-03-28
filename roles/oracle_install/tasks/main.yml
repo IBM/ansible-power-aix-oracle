@@ -1,10 +1,20 @@
 ---
 # Copyright (c) IBM Corporation 2021
 # tasks file for oracle_install
+- name: Creating NFS filesystem from nfshost for Oracle Binaries.
+  ibm.power_aix.filesystem:
+    device: "{{ora_nfs_device[0]}}"
+    nfs_server: "{{ora_nfs_host}}"
+    filesystem: "{{ora_nfs_filesystem[0]}}"
+    state: present
+  become: yes
+  become_user: root
+  when: ora_binary_location == 'nfs'
+
 - name: detecting oracle version to install {{ ora_version }}
   set_fact:
     oracle_source_files: "{{oracledbaix19c}}"
-  when: ora_version == "19.3.0.0.0"
+  when: ora_version == "19.3.0.0.0" 
   
 - name: detecting oracle grid version to install {{ ora_version }}
   set_fact:
@@ -39,10 +49,16 @@
     append: yes
     uid: "{{ora_user_uid}}"
 
+
+- name: Create Grid OS Groups
+  include_tasks: create_grid_osgroups.yml
+  when: grid_asm_flag
+
+
 - name: creating volume group for OH
   ibm.power_aix.lvg:
     vg_name: "{{ora_sw_vg}}"
-    pp_size: 4
+    pp_size: 32 
     vg_type: scalable
     state: present
     pvs: "{{ora_sw_vg_disk}}"
@@ -50,7 +66,7 @@
 
 - name: create File System for OH
   ibm.power_aix.filesystem:
-    filesystem:    "{{ ora_sw_fs }}"
+    filesystem: "{{ ora_sw_fs }}"
     state: present
     attributes: "size={{ora_sw_fs_size}}"
     vg: "{{ora_sw_vg}}"
@@ -67,24 +83,28 @@
     path: "{{ora_sw_fs}}"
   register: ora_dir 
 
-- name: creating Oracle Grid Home directory
-  file:
-    path: "{{grid_ora_home}}"
-    state: directory
-    mode: '0755'
-  when: grid_asm_flag
-
 - name: creating Oracle DB Home directory
   file:
     path: "{{ora_home}}"
     state: directory
-    mode: '0755'
+    mode: '0775'
 
 - name: creating Oracle Base directory
   file:
     path: "{{ora_base}}"
     state: directory
-    mode: '0755'
+    mode: '0775'
+
+- name: Check inventory for Oracle home
+  shell: |
+    grep "{{ora_home}}" "{{ora_inventory}}"/ContentsXML/inventory.xml
+  register: check_oracle_home
+  ignore_errors: true
+
+- name: Check if Oracle home installed
+  set_fact:
+    ora_exists: "{{ ora_home in check_oracle_home.stdout }}"
+
 
 - name: changing ownership to {{ora_user}} on {{ora_sw_fs}}
   file:
@@ -92,9 +112,86 @@
     state: directory
     recurse: yes
     owner: "{{ora_user}}"
-    group: "{{ora_group}}"
+    group: "{{ora_oinstall_group}}"
     mode: '0774'
-  when: ora_dir.stat.exists and ora_dir.stat.pw_name != ora_user
+  when: ora_dir.stat.exists and not ora_exists
+
+
+- name: Run initialization tasks
+  include_tasks: ../../preconfig/tasks/init.yml
+
+- name: Remove ru version decimal point
+  set_fact:
+    ru_version_without_decimal: "{{ ru_version | regex_replace('\\.', '') }}"
+  when: ru_version | default(false) 
+
+- name: Default ru version if not defined
+  set_fact:
+    ru_version_without_decimal: 193
+  when: ru_version is not defined or ru_version | default == '' or ru_version is none
+
+- name: RU Name remote/local/nfs
+  shell: "expr {{ ru_path }} : '^.*p\\([0-9]*\\)_.*$'"
+  register: ru_name_set
+  when:  ru_version | default(false) and (ru_version_without_decimal | int != 193) 
+
+
+- name: Set ru_name based on condition remote/local/nfs
+  set_fact:
+    ru_name: "{{ ru_name_set }}"
+  when:  ru_version | default(false) and (ru_version_without_decimal | int != 193)
+
+
+- name: Create a RU directory with specific owner
+  file:
+    path: "{{ru_tgt_path}}"  # Specify the directory path
+    state: directory
+    owner: "{{ora_user}}"
+    group: "{{ora_oinstall_group}}"
+    mode: "0775"
+  when:  ru_version | default(false) and (ru_version_without_decimal | int != 193) 
+
+- name: RU actual path merged with slash
+  set_fact:
+    merged_variable: "{{ ru_tgt_path }}/{{ ru_name.stdout }}"
+  when:  ru_version | default(false) and (ru_version_without_decimal | int != 193)
+
+
+- name: Check if RU is already unzipped
+  ansible.builtin.stat:
+    path: "{{done_dir}}/ru_unzipped"
+  register: ru_unzipped_stat
+  when:  ru_version | default(false) and (ru_version_without_decimal | int != 193)
+
+- name: Extracting RU source files from remote
+  unarchive:
+    src: "{{ ru_path }}"
+    dest: "{{ ru_tgt_path }}"
+    keep_newer: yes
+    owner: "{{ora_user}}"
+    group: "{{ora_oinstall_group}}"
+  when: 
+    - ru_version | default(false)
+    - (ru_version_without_decimal | int != 193)
+    - ora_binary_location == 'remote'
+    - not ru_unzipped_stat.stat.exists
+
+- name: Extracting RU source files from local/nfs
+  ansible.builtin.shell:
+    cmd: "unzip -o {{ ru_path }} -d {{ ru_tgt_path }}"
+  become_user: "{{ ora_grid_user }}"
+  become_method: su
+  become: yes
+  when:
+    - ru_version | default(false)
+    - ora_binary_location in ['local', 'nfs']
+    - (ru_version_without_decimal | int != 193)
+    - not ru_unzipped_stat.stat.exists
+
+
+- name: Touch ru_unzipped file
+  ansible.builtin.command: touch "{{done_dir}}"/ru_unzipped
+  when: ru_version | default(false) and (ru_version_without_decimal | int != 193) and not ru_unzipped_stat.stat.exists
 
 - name: Grid Installation 
   include_tasks: grid_install.yml
@@ -102,6 +199,21 @@
 
 - debug:
     msg: "Starting to Install DB home"
+
+- name: Check inventory for Oracle home
+  shell: |
+    grep "{{ora_home}}" "{{ora_inventory}}"/ContentsXML/inventory.xml
+  register: check_oracle_home
+  ignore_errors: true
+
+- name: Print registration status
+  debug:
+    msg: "Oracle home {{ora_home}} is {{'not ' if check_oracle_home.rc != 0 else ''}}registered in the central inventory."
+
+- name: Check if Oracle home installed
+  set_fact:
+    ora_exists: "{{ ora_home in check_oracle_home.stdout }}"
+
 
 - name: Set {{ora_user}} user env profile
   include_tasks: set_ora_profile.yml
@@ -111,15 +223,80 @@
     path: "{{ora_home}}/runInstaller"
   register: ora_file
 
-- name: copying oracle Single instance source files
+- name: Extracting oracle Single instance source files from remote
   unarchive:
     src: "{{item}}"
-    dest: "{{ora_home}}"
+    dest: "{{ ora_home }}"
     keep_newer: yes
     owner: "{{ora_user}}"
     group: "{{ora_oinstall_group}}"
   loop:   "{{ oracle_source_files |flatten(levels=1) }}"
-  when: not ora_file.stat.exists
+  when:
+    - not ora_file.stat.exists
+    - ora_binary_location == 'remote'
+
+
+- name: Extracting oracle Single instance source files from local/nfs
+  ansible.builtin.shell:
+    cmd: "unzip -o {{ oracle_source_files[0] }} -d {{ ora_home }}"
+  become_method: su 
+  become: yes
+  when:
+    - ora_binary_location in ['local','nfs']
+    - not ora_file.stat.exists
+
+
+- name: Check if the OPatch_bkp source directory exists
+  stat:
+    path: "{{ora_home}}/OPatch_bkp"
+  register: source_opatch_ora_stat
+  ignore_errors: yes
+  when: ru_version | default(false) and ru_version_without_decimal | int != 193
+
+- name: Move a OPatch directory from oracle home to OPatch backup
+  command: mv "{{ ora_home }}/OPatch" "{{ ora_home }}/OPatch_bkp"
+  when: ru_version | default(false) and ru_version_without_decimal | int != 193 and not source_opatch_ora_stat.stat.exists
+
+- name: Check if the OPatch backup folder exists
+  ansible.builtin.stat:
+    path: "{{ora_home}}/OPatch_bkp"
+  register: folder_check
+  when: ru_version | default(false) and ru_version_without_decimal | int != 193
+
+
+- name: Extracting OPatch from remote to oracle home
+  unarchive:
+    src: "{{ opatch_path }}"
+    dest: "{{ ora_home }}"
+    keep_newer: yes
+    owner: "{{ora_user}}"
+    group: "{{ora_oinstall_group}}"
+  when: 
+    - ru_version | default(false)
+    - ru_version_without_decimal | int != 193
+    - ora_binary_location == 'remote'
+
+
+- name: Extracting OPatch from local/nfs to oracle home
+  ansible.builtin.shell:
+    cmd: "unzip -o {{ opatch_path }} -d {{ ora_home }}"
+  become: yes
+  become_method: su
+  when:
+    - ru_version | default(false)
+    - ora_binary_location in ['local','nfs']
+    - ru_version_without_decimal | int != 193
+
+- name: changing ownership to {{ora_home}}
+  file:
+    path: "{{ora_home}}"
+    state: directory
+    recurse: yes
+    owner: "{{ora_user}}"
+    group: "{{ora_oinstall_group}}"
+    mode: '0774'
+  when: ora_dir.stat.exists and not ora_exists
+
 
 - name: Generating oracle response file Template a file to /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp
   template:
@@ -128,12 +305,13 @@
     owner: "{{ora_user}}"
     group: "{{ora_group}}"
     mode: '0644'
+  when: not ora_exists 
 
 - name: Running rootpre.sh
   shell: "{{ora_home}}/clone/rootpre.sh"
 
-- name: install-home-db | Install Oracle Database Server
-  shell: "{{ora_home}}/runInstaller -responseFile /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp -ignorePrereqFailure -silent -waitforcompletion"
+- name: install-home-db | Install Oracle Database Server with RU and with IgnorePreCheck
+  shell: "{{ora_home}}/runInstaller -responseFile /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp -applyRU {{merged_variable}} -ignorePrereqFailure -silent -waitforcompletion >> {{ done_dir }}/db_install.out 2>&1"
   become: yes
   become_method: su
   become_user: "{{ora_user}}"
@@ -142,18 +320,120 @@
   register: rdbms_install
   failed_when: (rdbms_install.rc not in [0,6,254])
 # 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> DBhome Already Installed
+  when:  
+    - ru_version | default(false)
+    - ru_version_without_decimal | int < 1918
+    - ru_version_without_decimal | int != 193
+    - ignoreprecheck
+    - not ora_exists
 
-- debug:
-    msg: "runInstaller output :: {{rdbms_install}}"
+
+- name: install-home-db | Install Oracle Database Server with RU and without IgnorePreCheck
+  shell: "{{ora_home}}/runInstaller -responseFile /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp -applyRU {{merged_variable}} -silent -waitforcompletion >> {{ done_dir }}/db_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: rdbms_install
+  failed_when: (rdbms_install.rc not in [0,6,254])
+# 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> DBhome Already Installed
+  when: 
+    - ru_version | default(false)
+    - ru_version_without_decimal | int < 1918
+    - ru_version_without_decimal | int != 193
+    - not ignoreprecheck
+    - not ora_exists
+
+
+- name: install-home-db | Install Oracle Database Server with Base and with IgnorePreCheck
+  shell: "{{ora_home}}/runInstaller -responseFile /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp -ignorePrereqFailure -silent -waitforcompletion >> {{ done_dir }}/db_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: rdbms_install
+  failed_when: (rdbms_install.rc not in [0,6,254])
+# 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> DBhome Already Installed
+  when:
+    - ru_version_without_decimal | int == 193
+    - ignoreprecheck
+    - not ora_exists
+
+- name: install-home-db | Install Oracle Database Server with Base and without IgnorePreCheck
+  shell: "{{ora_home}}/runInstaller -responseFile /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp -silent -waitforcompletion >> {{ done_dir }}/db_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: rdbms_install
+  failed_when: (rdbms_install.rc not in [0,6,254])
+# 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> DBhome Already Installed
+  when:
+    - ru_version_without_decimal | int == 193
+    - not ignoreprecheck
+    - not ora_exists
+
+
+- name: install-home-db | Install Oracle Database Server for >= 19.18 with IgnorePreCheck
+  shell: "{{ora_home}}/runInstaller -responseFile /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp -ignorePrereqFailure -silent -waitforcompletion >> {{ done_dir }}/db_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: rdbms_install
+  failed_when: (rdbms_install.rc not in [0,6,254])
+# 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> DBhome Already Installed
+  when:
+    - ru_version | default(false)
+    - ru_version_without_decimal | int >= 1918
+    - ru_version_without_decimal | int != 193
+    - ignoreprecheck
+    - not ora_exists
+
+- name: install-home-db | Install Oracle Database Server for >= 19.18 without IgnorePreCheck
+  shell: "{{ora_home}}/runInstaller -responseFile /tmp/oracle_install_rsp_file{{ansible_date_time.epoch}}.rsp -silent -waitforcompletion >> {{ done_dir }}/db_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: rdbms_install
+  failed_when: (rdbms_install.rc not in [0,6,254])
+# 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> DBhome Already Installed
+  when:
+    - ru_version | default(false)
+    - ru_version_without_decimal | int >= 1918
+    - ru_version_without_decimal | int != 193
+    - not ignoreprecheck
+    - not ora_exists
+
+
+
+- name: Applying {{ru_version}} Patch
+  shell: "{{ora_home}}/OPatch/opatchauto apply {{merged_variable}} -binary -oh {{ora_home}}  >> {{ done_dir }}/applyru_oracle_gteq_1918.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_user}}"
+  register: applyru_install
+  when: 
+    - ru_version | default(false)
+    - ru_version_without_decimal | int >= 1918
+    - ru_version_without_decimal | int != 193
+    - not ora_exists 
+
 
 - name: Running orainstRoot.sh
   shell:
     cmd: "{{ora_inventory}}/orainstRoot.sh"
+  when: not ora_exists
 
 - name: Running root.sh
   shell:
     cmd: "{{ora_home}}/root.sh"
   register: rootscript
+  when: not ora_exists
 
-- debug:
-    msg: "root.sh output :: {{rootscript}}"

@@ -1,6 +1,6 @@
 ---
 # Changing ASM disks ownership and permissions
 - name: Change disk {{asm_disk_loc_prefix}}{{item}} owership
-  raw: chown {{ora_user}}:{{ora_group}} {{asm_disk_loc_prefix}}{{item}}
+  raw: chown {{ora_grid_user}}:{{ora_group}} {{asm_disk_loc_prefix}}{{item}}
 - name: Change disk {{asm_disk_loc_prefix}}{{item}} permission
   raw: chmod 660 {{asm_disk_loc_prefix}}{{item}}

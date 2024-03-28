@@ -3,3 +3,23 @@
 
 aix_req_filesets: ['bos.adt.base', 'bos.adt.lib', 'bos.adt.libm','bos.perf.libperfstat', 'bos.perf.perfstat', 'bos.perf.proctools','rsct.basic.rte','rsct.compat.clients.rte','xlfrte.aix61','xlC.aix61.rte','xlC.rte']
 skip_grid_install: false
+
+scripts_dir: [ "{{ work_dir }}", "scripts" ]
+saved_dir:   [ "{{ work_dir }}", "saved" ]
+done_dir:    [ "{{ work_dir }}", "done" ]
+files_dir:   [ "{{ work_dir }}", "files" ]
+backup_dir:  [ "{{ work_dir }}", "backup" ]
+
+prenfsconfig:
+ lpp_src:
+    # !!! update !!!
+    nfs_mount: [
+      # local_mnt             nfs_export            nfs_server_host
+      # ---------             ----------            ---------------
+      ["{{ nfsfilesetMountPoint }}", "{{ nfsfilesetExportDir }}", "{{ nfsfilesetServerIP }}"]
+    ]
+
+    # !!! update !!!
+    subdir: ''
+
+ora_version: "19.3.0.0.0"

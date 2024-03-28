@@ -14,60 +14,283 @@
     path: "{{grid_ora_home}}/gridSetup.sh"
   register: ora_file
 
-- name: copying oracle grid source files
+
+- name: creating Oracle Grid Home directory
+  file:
+    path: "{{grid_ora_home}}"
+    state: directory
+    mode: '0755'
+  when: grid_asm_flag
+
+- name: Extracting oracle grid source files from remote
   unarchive:
     src: "{{item}}"
     dest: "{{ grid_ora_home }}"
     keep_newer: yes
-    owner: "{{ora_user}}"
+    owner: "{{ora_grid_user}}"
     group: "{{ora_oinstall_group}}"
   loop:   "{{ oracle_grid_source_files |flatten(levels=1) }}"
-  when: not ora_file.stat.exists
+  when: 
+    - not ora_file.stat.exists
+    - ora_binary_location == 'remote'
+
+- name: Extracting oracle grid source files from local/nfs
+  ansible.builtin.shell:
+    cmd: "unzip -o {{ oracle_grid_source_files[0] }} -d {{ grid_ora_home }}"
+  become_method: su
+  become: yes
+  when:
+    - ora_binary_location in ['local','nfs']
+    - not ora_file.stat.exists
+
+- name: Check inventory for  grid home
+  shell: |
+    grep "{{grid_ora_home}}" "{{ora_inventory}}"/ContentsXML/inventory.xml
+  register: check_grid_home
+  ignore_errors: true
+
+- name: Print grid home registration status
+  debug:
+    msg: "Grid home {{grid_ora_home}} is {{'not ' if check_grid_home.rc != 0 else ''}}registered in the central inventory."
+
+- name: Check if grid home installed
+  set_fact:
+    asm_exists: "{{ grid_ora_home in check_grid_home.stdout }}"
+
+
+- name: changing ownership to {{grid_ora_home}}
+  file:
+    path: "{{ grid_ora_home }}"
+    state: directory
+    recurse: yes
+    owner: "{{ora_grid_user}}"
+    group: "{{ora_oinstall_group}}"
+    mode: '0774'
+  when: ora_dir.stat.exists and not asm_exists
+
+- name: Template out myruncluvfy.sh
+  template:
+    src:  templates/myruncluvfy.sh.j2
+    dest: "{{ scripts_dir }}/myruncluvfy.sh"
+    mode: '755'
+  when: "(ignoreprecheck | default(false) == false)"
+  tags: runcluvfy
+
+- name: Run myruncluvfy.sh
+  command:
+    cmd: "./myruncluvfy.sh"
+    chdir: "{{ scripts_dir }}"
+  register: myruncluvfy_out
+  become: yes
+  become_user: "{{ ora_grid_user }}"
+  become_method: su
+  changed_when: myruncluvfy_out.stdout is search('changed')
+  when: "(ignoreprecheck | default(false) == false)"
+  tags: runcluvfy
+
+- name: runcluvfy 'FAILED'
+  fail:
+    msg: "runcluvfy failed. Check the output in {{ done_dir }}/myruncluvfy.out."
+  when: "(ignoreprecheck | default(false) == false) and ('FAILED' in myruncluvfy_out.stdout or 'FAILED' in myruncluvfy_out.stderr)"
+  tags: runcluvfy
+
+- name: Check if the OPatch_bkp source directory exists
+  stat:
+    path: "{{grid_ora_home}}/OPatch_bkp"
+  register: source_opatch_dir_stat
+  ignore_errors: yes
+  when: ru_version | default(false) and (ru_version_without_decimal | int != 193)
+
+- name: Move a OPatch directory from grid home to OPatch backup
+  command: mv "{{ grid_ora_home }}/OPatch" "{{ grid_ora_home }}/OPatch_bkp"
+  when: ru_version | default(false) and (ru_version_without_decimal | int != 193) and not source_opatch_dir_stat.stat.exists
+
+
+- name: copying OPatch source files from remote to Grid home
+  unarchive:
+    src: "{{ opatch_path }}"
+    dest: "{{ grid_ora_home }}"
+    keep_newer: yes
+    owner: "{{ora_grid_user}}"
+    group: "{{ora_oinstall_group}}"
+  when:
+    - ru_version | default(false)
+    - (ru_version_without_decimal | int != 193)
+    - ora_binary_location == 'remote'
+
+
+- name: copying OPatch source files from local/nfs to Grid home
+  ansible.builtin.shell:
+    cmd: "unzip -o {{ opatch_path }} -d {{ grid_ora_home }}"
+  become_method: su
+  become: yes
+  when:
+    - ru_version | default(false)
+    - ora_binary_location in ['local','nfs']
+    - (ru_version_without_decimal | int != 193)
+
+
+
+- name: changing ownership to {{grid_ora_home}}/OPatch
+  file:
+    path: "{{ grid_ora_home }}/OPatch"
+    state: directory
+    recurse: yes
+    owner: "{{ora_grid_user}}"
+    group: "{{ora_oinstall_group}}"
+    mode: '0774'
+  when: ora_dir.stat.exists
+
+
 
 - name: Running rootpre.sh
   shell: "{{grid_ora_home}}/clone/rootpre.sh"
+  when: not asm_exists
 
-- name: Generating oracle grid response file Template file to /tmp/oracle_grid_install_rsp_file{{ansible_date_time.epoch}}.rsp
+- name: Set fact for ansible_date_time.epoch
+  set_fact:
+    current_epoch: "{{ ansible_date_time.epoch }}"
+
+- name: Generating oracle grid response file Template file to /tmp/oracle_grid_install_rsp_file{{current_epoch}}.rsp
   template:
     src: ../templates/oracle19c_grid_install.rsp
-    dest: "/tmp/oracle_grid_install_rsp_file{{ansible_date_time.epoch}}.rsp"
-    owner: "{{ora_user}}"
-    group: "{{ora_group}}"
+    dest: "/tmp/oracle_grid_install_rsp_file{{current_epoch}}.rsp"
+    owner: "{{ora_grid_user}}"
+    group: "{{ora_oinstall_group}}"
     mode: '0644'
+  when: not asm_exists
 
-- name: install-home-grid | Install Oracle Grid Standalone
-  shell: "{{grid_ora_home}}/gridSetup.sh -silent -ignorePrereqFailure -responseFile /tmp/oracle_grid_install_rsp_file{{ansible_date_time.epoch}}.rsp -waitforcompletion"
+- name: install-home-grid | Install Oracle Grid Standalone with RU and with IgnorePreCheck
+  shell: "{{grid_ora_home}}/gridSetup.sh -applyRU {{merged_variable}} -silent -ignorePrereqFailure -responseFile /tmp/oracle_grid_install_rsp_file{{current_epoch}}.rsp -waitforcompletion >> {{ done_dir }}/grid_install.out 2>&1"
   become: yes
   become_method: su
-  become_user: "{{ora_user}}"
+  become_user: "{{ora_grid_user}}"
   environment:
     SKIP_ROOTPRE: "TRUE"
   register: grid_install
   failed_when: (grid_install.rc not in [0,6,254])
 # 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> Gridhome Already Installed
-- debug:
-    msg: "GridSetup.sh status :: {{grid_install}}"
+  when: 
+    - ru_version | default(false)
+    - ru_version_without_decimal | int < 1918
+    - ru_version_without_decimal | int != 193
+    - ignoreprecheck 
+    - not asm_exists
+
+- name: install-home-grid | Install Oracle Grid Standalone with RU and without IgnorePreCheck
+  shell: "{{grid_ora_home}}/gridSetup.sh -applyRU {{merged_variable}} -silent -responseFile /tmp/oracle_grid_install_rsp_file{{current_epoch}}.rsp -waitforcompletion >> {{ done_dir }}/grid_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_grid_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: grid_install
+  failed_when: (grid_install.rc not in [0,6,254])
+  # 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> Gridhome Already Installed
+  when: 
+    - ru_version | default(false)
+    - ru_version_without_decimal | int < 1918 
+    - ru_version_without_decimal | int != 193
+    - not ignoreprecheck
+    - not asm_exists
+
+- name: install-home-grid | Install Oracle Grid Standalone Base Version with IgnorePreCheck
+  shell: "{{grid_ora_home}}/gridSetup.sh -silent -ignorePrereqFailure -responseFile /tmp/oracle_grid_install_rsp_file{{current_epoch}}.rsp -waitforcompletion >> {{ done_dir }}/grid_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_grid_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: grid_install
+  failed_when: (grid_install.rc not in [0,6,254])
+# 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> Gridhome Already Installed
+  when: 
+    - ru_version_without_decimal | int == 193
+    - ignoreprecheck
+    - not asm_exists
+
+- name: install-home-grid | Install Oracle Grid Standalone Base Version without IgnorePrecheck
+  shell: "{{grid_ora_home}}/gridSetup.sh -silent -responseFile /tmp/oracle_grid_install_rsp_file{{current_epoch}}.rsp -waitforcompletion >> {{ done_dir }}/grid_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_grid_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: grid_install
+  failed_when: (grid_install.rc not in [0,6,254])
+  # 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> Gridhome Already Installed
+  when: 
+    - ru_version_without_decimal | int == 193
+    - not ignoreprecheck 
+    - not asm_exists
+
+
+- name: install-home-grid | Install Oracle Grid Standalone for >= 19.18 with IgnorePreCheck
+  shell: "{{grid_ora_home}}/gridSetup.sh -silent -ignorePrereqFailure -responseFile /tmp/oracle_grid_install_rsp_file{{current_epoch}}.rsp -waitforcompletion >> {{ done_dir }}/grid_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_grid_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: grid_install
+  failed_when: (grid_install.rc not in [0,6,254])
+# 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> Gridhome Already Installed
+  when: 
+    - ru_version | default(false)
+    - ru_version_without_decimal | int >= 1918
+    - ru_version_without_decimal | int != 193
+    - ignoreprecheck
+    - not asm_exists
+
+- name: install-home-grid | Install Oracle Grid Standalone for >= 19.18 without IgnorePrecheck
+  shell: "{{grid_ora_home}}/gridSetup.sh -silent -responseFile /tmp/oracle_grid_install_rsp_file{{current_epoch}}.rsp -waitforcompletion >> {{ done_dir }}/grid_install.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_grid_user}}"
+  environment:
+    SKIP_ROOTPRE: "TRUE"
+  register: grid_install
+  failed_when: (grid_install.rc not in [0,6,254])
+  # 0 --> Successfull , 6 --> Successfull with Warnings, 254 --> Gridhome Already Installed
+  when:
+    - ru_version | default(false)
+    - ru_version_without_decimal | int >= 1918
+    - ru_version_without_decimal | int != 193
+    - not ignoreprecheck 
+    - not asm_exists
+
+- name: Applying {{ru_version}} Patch
+  shell: "{{grid_ora_home}}/OPatch/opatchauto apply {{merged_variable}} -binary -oh {{grid_ora_home}}  >> {{ done_dir }}/applyru_gteq_1918.out 2>&1"
+  become: yes
+  become_method: su
+  become_user: "{{ora_grid_user}}"
+  register: applyru_install
+  when: 
+    - ru_version | default(false)
+    - ru_version_without_decimal | int >= 1918
+    - ru_version_without_decimal | int != 193
+    - not asm_exists
+
 
 - name: Running orainstRoot.sh
   shell:
     cmd: "{{ora_inventory}}/orainstRoot.sh"
+  when: not asm_exists
 
 - name: Running root.sh
   shell:
     cmd: "{{grid_ora_home}}/root.sh"
   register: rootscript
+  when: not asm_exists
 
-- debug:
-    msg: "root.sh output :: {{rootscript}}"
   
 - name: Running ConfigTools
-  shell: "{{grid_ora_home}}/gridSetup.sh -silent -executeConfigTools -responseFile /tmp/oracle_grid_install_rsp_file{{ansible_date_time.epoch}}.rsp"
+  shell: "{{grid_ora_home}}/gridSetup.sh -silent -executeConfigTools -responseFile /tmp/oracle_grid_install_rsp_file{{ansible_date_time.epoch}}.rsp  >> {{ done_dir }}/runconfigtools.out 2>&1"
   become: yes
   become_method: su
-  become_user: "{{ora_user}}"
+  become_user: "{{ora_grid_user}}"
   environment:
     SKIP_ROOTPRE: "TRUE"
   register: grid_configtools
+  when: not asm_exists
   
-- debug:
-    msg: "Grid ConfigTools Status :: {{grid_configtools}}"

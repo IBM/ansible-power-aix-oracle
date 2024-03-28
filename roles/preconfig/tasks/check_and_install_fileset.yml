@@ -1,0 +1,35 @@
+- name: Check AIX required {{item}} Fileset present or not
+  command: lslpp -l {{item}}
+  register: fileset_output
+  failed_when: fileset_output.rc not in [ 0, 1 ]
+
+- name: Display result
+  debug:
+    var: fileset_output.stderr
+  when: fileset_output.rc not in [ 0 ]
+
+- name: Install additional AIX {{item}}  filesets
+  command:
+    cmd:   "/usr/sbin/installp -acgXd . -Y {{ item }}"
+    chdir: "{{ prenfsconfig.lpp_src.nfs_mount.0.0 }}
+           {%- if prenfsconfig.lpp_src.subdir is defined and
+                  prenfsconfig.lpp_src.subdir | default('', true) | length > 0
+           -%}
+              {{ '/' + prenfsconfig.lpp_src.subdir }}
+           {%- endif -%}"
+  when: 
+    - fileset_output.rc in [ 1 ]
+    - not use_std_nim
+    - nfsfilesetMountPoint is defined and nfsfilesetMountPoint | default('') != None and nfsfilesetMountPoint | default('') != ''
+    - nfsfilesetExportDir is defined and nfsfilesetExportDir | default('') != None and nfsfilesetExportDir | default('') != ''
+    - nfsfilesetServerIP is defined and nfsfilesetServerIP | default('') != None and nfsfilesetServerIP | default('') != ''
+
+
+- name: Install additional AIX {{item}} filesets using std nim mount
+  command:
+    cmd:   "/usr/sbin/installp -acgXd . -Y {{ item }}"
+    chdir: "{{ powernim_local_path }}"
+  when: 
+    - fileset_output.rc in [ 1 ]
+    - use_std_nim
+

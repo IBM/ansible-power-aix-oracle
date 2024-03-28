@@ -1,8 +1,0 @@
-- name: Check AIX required Fileset present or not
-  command: lslpp -l {{item}}
-  register: fileset_output
-  failed_when: fileset_output.rc not in [ 0, 1 ]
-- name: Fileset status
-  fail:
-    msg: "{{fileset_output.stderr}}"
-  when: fileset_output.stderr != ""

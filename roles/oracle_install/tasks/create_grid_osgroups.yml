@@ -1,0 +1,31 @@
+- name: creating group {{ora_asmdba_group}} with gid {{ora_asmdba_group_gid}}
+  group:
+    name: "{{ora_asmdba_group}}"
+    gid:  "{{ora_asmdba_group_gid}}"
+    state: present
+
+- name: creating group {{ora_asmoper_group}} with gid {{ora_asmoper_group_gid}}
+  group:
+    name: "{{ora_asmoper_group}}"
+    gid:  "{{ora_asmoper_group_gid}}"
+    state: present
+
+- name: creating group {{ora_asmadmin_group}} with gid {{ora_asmadmin_group_gid}}
+  group:
+    name: "{{ora_asmadmin_group}}"
+    gid:  "{{ora_asmadmin_group_gid}}"
+    state: present
+
+- name: Check if user exists
+  command: "lsuser {{ ora_grid_user }}"
+  register: user_check
+  ignore_errors: yes
+
+- name: creating user {{ora_grid_user}} with uid {{ora_grid_user_uid}}
+  user:
+    name: "{{ora_grid_user}}"
+    group: "{{ora_oinstall_group}}"
+    groups: "{{ora_group}},{{ora_asmadmin_group}},{{ora_asmdba_group}},{{ora_asmoper_group}}"
+    append: yes
+    uid: "{{ora_grid_user_uid}}"
+  when: user_check.rc != 0

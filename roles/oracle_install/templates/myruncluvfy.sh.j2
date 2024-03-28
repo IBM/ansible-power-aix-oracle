@@ -1,0 +1,50 @@
+#!/usr/bin/ksh93
+
+# Copyright (c) IBM Corporation 2021
+
+# This script executes runcluvfy.sh in Grid home to verify the nodes
+# meet Oracale RAC install requirements.
+
+# Idempotent: Yes
+
+grid_home="{{ grid_ora_home }}"
+nodelist="{{ hostvars[inventory_hostname].ansible_hostname }}"
+
+  #+ make sure this script is running as this user.
+check_user_is "{{ ora_user  }}"
+
+################################################################################
+#                                                                              #
+# Main                                                                         #
+#                                                                              #
+################################################################################
+
+log="{{ done_dir }}/myruncluvfy.out"
+runit=0
+
+if [ -f $log ]; then
+  if grep -i 'FAILED' $log; then
+    # Failed last time
+    runit=1
+  else
+    runit=0
+  fi
+else
+  runit=1
+fi
+
+
+if [ $runit -eq 1 ]; then
+  cd $grid_home
+  ./runcluvfy.sh stage -pre hacfg -verbose > $log 2>&1
+
+  if grep -i 'FAILED' $log; then
+    RES=-1
+  else
+    RES=0
+  fi
+  error_if_non_zero $RES "runcluvfy_ext.sh changed (failed)"
+  echo "runcluvfy_ext.sh changed (completed successlly)."
+fi
+
+exit 0
