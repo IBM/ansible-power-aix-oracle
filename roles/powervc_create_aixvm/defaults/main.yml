@@ -1,0 +1,5 @@
+---
+# defaults file for powervc_create_aixvm
+
+group_name: pvc_aix
+hostip:

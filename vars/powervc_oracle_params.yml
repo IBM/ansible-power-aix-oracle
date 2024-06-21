@@ -1,0 +1,123 @@
+# Copyright (c) IBM Corporation 2021
+# This file is defining Oracle Variables needed for oracle single instance installation on PowerVC AIX VM
+
+# Below are the variables that are specific to PowerVC
+vm_name: "oravm"
+cimage_id: "9437d7e3-14de-4865-a13b-12479fa05909"
+vm_profile: "medium"
+vm_network: "Network129"
+orasw_vg_disk_size: 100
+data_disk_count: 3 
+data_disk_size: 20
+data_disk_prefix: "{{ vm_name }}_data"
+data_disks: "{%- for n in range(2, data_disk_count + 2, 1 ) -%} {%- if n == data_disk_count+1 -%} hdisk{{ n }} {%- else -%} hdisk{{ n }}, {%- endif -%} {%- endfor -%}"
+powervc_storage_template: "FS5000 base template"
+
+# Below are the variables that are needed for Oracle Deployment
+
+# Provide the ansible work directory on target system
+work_dir:   &work_dir "/tmp/ansible"
+
+# binary location can be remote|local|nfs
+# remote : Ansible Controller location defined in oracledbaix19c & oraclegridaix19c
+# local: Local location of Target Hosts
+# nfs: Network File system location
+ora_binary_location: local 
+ora_parent_dir: "/orabin/19c"
+# Set the below if the variable "ora_binary_location=nfs"
+ora_nfs_host: 192.168.56.10
+ora_nfs_device:
+  - /repos
+ora_nfs_filesystem:
+  - /binora
+
+
+# Set the below locations as per the above "ora_binary_location" type
+oracledbaix19c:
+           - "{{ ora_parent_dir }}/V982583-01_193000_db.zip"
+oraclegridaix19c:
+           - "{{ ora_parent_dir }}/V982588-01_193000_grid.zip"
+# Set below variables when using applyRU along with installation
+ru_path: "{{ ora_parent_dir }}/RU19.23/p36233126_190000_AIX64-5L.zip"
+ru_version: 19.23
+opatch_path: "{{ ora_parent_dir }}/opatch-12.2.0.1.42_p6880880_190000_AIX64-5L.zip"
+
+preconfig:
+  linux:
+    tools: ['unzip']
+#   tools: ['bash', 'unzip', 'sudo']
+# !!! update !!!
+    optional_tools: []
+
+# Provide optional nfs details for filesets installation
+nfsfilesetMountPoint:
+nfsfilesetExportDir:
+nfsfilesetServerIP:
+
+# If nim filesystem mounted on target host, specify use_std_nim to true. On PowerVS VMs we have /usr/sys/inst.images/installp/ppc
+use_std_nim: false 
+powernim_local_path: '/usr/sys/inst.images/installp/ppc'
+
+ora_user: oracle
+ora_user_uid: 600 
+ora_group: dba
+ora_group_gid: 500
+ora_oinstall_group: oinstall
+ora_oinstall_group_gid: 501
+ora_oper_group: oper
+ora_oper_group_gid: 503
+ora_home_profile: /home/{{ora_user}}
+ora_install_group: oinstall
+ora_asmdba_group: asmdba
+ora_asmoper_group: asmoper
+ora_asmadmin_group: asmadmin
+ora_asmdba_group_gid: 504
+ora_asmoper_group_gid: 505
+ora_asmadmin_group_gid: 506
+
+ignoreprecheck: false 
+
+# Specify os paging size in MB
+os_paging_size: 16384              
+
+ora_sid: orcl 
+ora_pwd: Oracle4u
+ora_character_set: WE8MSWIN1252
+
+ora_sw_vg: oravg
+ora_sw_vg_disk:  ['hdisk1']
+ora_sw_fs: "/u01"
+ora_sw_fs_size: 96G
+ru_tgt_path: "{{ora_sw_fs}}/RU19"
+ora_inventory: "{{ora_sw_fs}}/oraInventory"
+ora_base: "{{ora_sw_fs}}/base"
+ora_home: "{{ora_sw_fs}}/product/{{ora_version}}/database"
+
+# Fill When DB stage on JFS
+
+ora_data_vg: oradatavg
+ora_data_vg_disk: "{{ data_disks.split(',') }}" 
+ora_data_fs: /oradata 
+ora_data_fs_size: 5G
+ora_db_fs_list:
+  - { fs_name: "/datafiles", size: "8G" }
+  - { fs_name: "/controlfiles", size: "2G" }
+  - { fs_name: "/redologs", size: "4G", bs: 512  }
+  
+# Fill When DB lies on ASM
+
+grid_asm_flag: true 
+grid_ora_home: "{{ora_sw_fs}}/grid/home"
+
+# Grid reponsefile parameter
+ora_grid_user: grid
+ora_grid_user_uid: 601
+asm_sys_password: oracle
+asm_diskgroup_name: DATA
+asm_diskgroup_redundancy: EXTERNAL
+asm_diskgroup_ausize: 4
+asm_diskgroup_disk: "{{ data_disks.split(',') }}" 
+asm_disk_loc_prefix: "/dev/r"
+asm_diskdiscoverystring: "{{asm_disk_loc_prefix}}hdisk*"
+asm_asmsnmp_password: oracle
+

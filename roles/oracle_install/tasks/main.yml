@@ -119,6 +119,7 @@
 
 - name: Run initialization tasks
   include_tasks: ../../preconfig/tasks/init.yml
+  when: not init_done is defined
 
 - name: Remove ru version decimal point
   set_fact:
@@ -192,6 +193,7 @@
 - name: Touch ru_unzipped file
   ansible.builtin.command: touch "{{done_dir}}"/ru_unzipped
   when: ru_version | default(false) and (ru_version_without_decimal | int != 193) and not ru_unzipped_stat.stat.exists
+
 
 - name: Grid Installation 
   include_tasks: grid_install.yml

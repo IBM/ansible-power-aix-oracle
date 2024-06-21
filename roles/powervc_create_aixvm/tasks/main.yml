@@ -1,0 +1,57 @@
+- name: Create ssh key pair definition
+  openstack.cloud.keypair:
+    state: present
+    name: ssh_key
+    public_key_file: "{{ ansible_env.HOME }}/.ssh/id_rsa.pub"
+
+- name: Creating VM using PowerVC
+  openstack.cloud.server:
+    state: present
+    name: "{{ vm_name }}"
+    image: "{{ cimage_id }}"
+    flavor: "{{ vm_profile }}"
+    network: "{{ vm_network }}"
+    key_name: ssh_key
+    timeout: 600
+  register: vm
+#- debug:
+#    msg: "{{ vm.server }}"
+
+- name: List VM details "{{ vm_name }}"
+  openstack.cloud.server_info:
+    name: "{{ vm_name }}"
+  register: vm1
+#- debug:
+#    msg: "{{ vm1 }}"
+#- debug:
+#    msg: "{{ vm1.servers[0].access_ipv4 }}"
+
+
+- name: set hostip with  VM's public IP address
+  set_fact:
+    hostip: "{{ vm1.servers[0].access_ipv4 }}"
+
+- name: Wait for SSH port 22 to be available online on VM
+  wait_for:
+    host: "{{ hostip }}"
+    port: 22
+
+- name: Create storage volume for Oracle software VG
+  openstack.cloud.volume:
+    state: present
+    name: "{{ vm_name }}_oraswvg"
+    size: "{{ orasw_vg_disk_size }}"
+    volume_type: "{{ powervc_storage_template }}"
+
+- name: "Attach storage volume for Oracle software VG"
+  openstack.cloud.server_volume:
+    state: present
+    server: "{{ vm_name }}"
+    volume: "{{ vm_name }}_oraswvg"
+
+- name: Create and attach Data disks
+  include_tasks: disk_create_attach.yml
+  loop: "{{ range(1, data_disk_count + 1, 1)|list }}"
+
+- name: Update the ansible inventory file with vm details
+  include_tasks: update_inventory.yml

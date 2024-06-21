@@ -1,0 +1,25 @@
+---
+- name: "Play1: Creating PowerVC VM" 
+  hosts: localhost 
+  gather_facts: yes
+  vars_files: vars/powervc_oracle_params.yml
+  vars:
+    ansible_python_interpreter: /usr/bin/python 
+  roles:
+    - role: powervc_create_aixvm 
+      tags: powervc_create_aixvm
+
+- name: "Play2: Deploying Oracle SI DB" 
+  hosts: "{{ vm_name }}"
+  gather_facts: yes
+  vars_files: vars/powervc_oracle_params.yml
+  vars:
+    ansible_python_interpreter: /opt/freeware/bin/python3
+  roles: 
+    - role: preconfig
+      tags: preconfig
+    - role: oracle_install
+      tags: oracle_install
+    - role: oracle_createdb
+      tags: oracle_createdb
+

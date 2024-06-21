@@ -1,0 +1,14 @@
+- name: Create a new volume
+  openstack.cloud.volume:
+    state: present
+    name: "{{ data_disk_prefix }}_{{ item }}"
+    size: "{{ data_disk_size }}"
+    volume_type: "{{ powervc_storage_template }}"
+  register: volume_create_information
+
+- name: "Attach storage volume"
+  openstack.cloud.server_volume:
+    state: present
+    server: "{{ vm_name }}"
+    volume: "{{ data_disk_prefix }}_{{ item }}"
+  register: volume_attach_information
