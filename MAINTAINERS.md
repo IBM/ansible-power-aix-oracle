@@ -10,3 +10,4 @@ The maintainers are listed in alphabetical order of their Github username.
 
 
 Bhargavaram Akula - bhargaku@in.ibm.com
+sudhindra kumasagi - sudhindra.kumasagi@ibm.com
