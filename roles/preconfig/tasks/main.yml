@@ -2,7 +2,6 @@
 # tasks file for AIX config for Oracle Single Instance DB 
 # chfs fails if the target size is the same as the current!
 
-
 - name: Run initialization tasks
   include_tasks: init.yml
 
@@ -65,15 +64,6 @@
   register: os_level
   changed_when: false
 
-#- name: Set a aix73 flag
-#  ansible.builtin.set_fact:
-#     aix73: false 
-
-#- name: Set a aix73 flag
-#  ansible.builtin.set_fact:
-#     aix73: true
-#  when: (os_level.stdout_lines[0] | int) >= 73
-
 - name: Check Package
   ansible.builtin.shell: "lslpp -Lc | grep -i {{ item }}"
   with_items: "{{ preconfig.linux.tools + preconfig.linux.optional_tools }}"
@@ -92,12 +82,9 @@
      ]
 
 - name: Use dnf for installing rpm packages 
-  ansible.builtin.dnf:
-    name: "{{ item }}"
-    state: present
-    use_backend: dnf4
+  ansible.builtin.shell: "/opt/freeware/bin/dnf install -y {{ item }}"
   environment:
-    PATH: "/usr/bin:/usr/sbin/:/opt/freeware/bin"
+    PATH: "/opt/freeware/bin:usr/bin:/usr/sbin"
   register: tools_out
   ignore_errors: yes
   when: rpm_list is defined
@@ -106,19 +93,18 @@
   with_items:
      - "{{ rpm_list }}"
 
-#- name : AIX version <73  using yum for installing packages 
-#  ansible.builtin.yum:
-#    name: "{{ item }}"
-#    state: latest
-#  environment:
-#    PATH: "/usr/bin:/usr/sbin/:/opt/freeware/bin"
-#  register: tools_out
-#  ignore_errors: yes
-#  when: not aix73 and rpm_list is defined
-#  failed_when:
-#     - (preconfig.linux.tools is not defined) or (tools_out.rc != 0)
-#  with_items:
-#     - "{{ rpm_list }}"
+- name: Check for backup resolv.conf file
+  ansible.builtin.stat:
+   path: "{{ backup_dir }}/resolv.conf.orig"
+  register: nameserv_file
+
+- name: Backup resolv.conf file to {{ scripts_dir }}
+  ansible.builtin.copy:
+    src: /etc/resolv.conf
+    dest: "{{ backup_dir }}/resolv.conf.orig"
+  when: 
+    - modify_nameserv
+    - not nameserv_file.stat.exists
 
 - name: setting DNS
   ansible.builtin.copy:
@@ -126,7 +112,10 @@
     dest: /etc/resolv.conf
     mode : '0664'
     owner: root
-    group: system 
+    group: system
+  when: 
+    - modify_nameserv
+    - not nameserv_file.stat.exists
  
 - name: setting DNS order
   ansible.builtin.copy:
@@ -187,9 +176,6 @@
 - name: executing system paging_space script
   ansible.builtin.shell : /tmp/increase_paging_space.sh {{os_paging_size}}
   register: page_out
-
-#- ansible.builtin.debug:
-#    msg: "{{page_out}}"
 
 - name: Copy disk_validate script
   ansible.builtin.copy:
