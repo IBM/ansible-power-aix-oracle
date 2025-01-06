@@ -4,6 +4,11 @@
 # Provide the ansible work directory on target system
 work_dir:   &work_dir "/tmp/ansible"
 
+# Setting this to true will backup /etc/resolv.conf file and copies the file roles/preconfig/files/resolv.conf to /etc.
+# Make sure to update the nameserver details in roles/precofig/files/resolv.conf.
+# If set false no changes will be done to /etc/resolv.conf file
+modify_nameserv: true
+
 # binary location can be remote|local|nfs
 # remote : Ansible Controller location defined in oracledbaix19c & oraclegridaix19c
 # local: Local location of Target Hosts
@@ -11,13 +16,11 @@ work_dir:   &work_dir "/tmp/ansible"
 ora_binary_location: nfs
 
 # Set the below if the variable "ora_binary_location=nfs"
-ora_nfs_host: 192.168.56.10
+ora_nfs_host: 192.140.176.12
 ora_nfs_device:
   - /repos
 ora_nfs_filesystem:
   - /binora
-
-
 
 # Set the below locations as per the above "ora_binary_location" type
 oracledbaix19c:
@@ -25,9 +28,9 @@ oracledbaix19c:
 oraclegridaix19c:
            - /binora/images/oracle/19c/V982588-01_193000_grid.zip
 # Set below variables when using applyRU along with installation
-ru_path: /binora/images/oracle/19c/RU19.22/p35940989_190000_AIX64-5L_RU19.22.zip
-ru_version: 19.22
-opatch_path: /binora/images/oracle/opatch/12.2.0.1.41/opatch-12.2.0.1.41_p6880880_210000_AIX64-5L.zip
+ru_path: /binora/images/oracle/19c/RU19.25/p36916690_190000_AIX64-5L_GI_RU19.25.zip
+ru_version: 19.25
+opatch_path: /binora/images/oracle/opatch/12.2.0.1.44/p6880880_121010_AIX64-5L.zip
 
 preconfig:
   linux:
@@ -37,16 +40,16 @@ preconfig:
     optional_tools: []
 
 # Provide optional nfs details for filesets installation
-nfsfilesetMountPoint: /filesetaix
-nfsfilesetExportDir: /nim/AIX73TL1/lppsource/installp/ppc
-nfsfilesetServerIP: 192.168.116.16
+nfsfilesetMountPoint:
+nfsfilesetExportDir:
+nfsfilesetServerIP:
 
 # If nim filesystem mounted on target host, specify use_std_nim to true. On PowerVS VMs we have /usr/sys/inst.images/installp/ppc
-use_std_nim: false 
+use_std_nim: false
 powernim_local_path: '/usr/sys/inst.images/installp/ppc'
 
 ora_user: oracle
-ora_user_uid: 600 
+ora_user_uid: 600
 ora_group: dba
 ora_group_gid: 500
 ora_oinstall_group: oinstall
@@ -65,16 +68,16 @@ ora_asmadmin_group_gid: 506
 ignoreprecheck: false
 
 # Specify os paging size in MB
-os_paging_size: 8024              
+os_paging_size: 16384
 
-ora_sid: orcl 
+ora_sid: orcl
 ora_pwd: Oracle4u
 ora_character_set: WE8MSWIN1252
 
-ora_sw_vg: oravg
-ora_sw_vg_disk:  ['hdisk1','hdisk2']
-ora_sw_fs: "/u01"
-ora_sw_fs_size: 200G
+ora_sw_vg: orafsvg
+ora_sw_vg_disk:  ['hdisk3','hdisk5']
+ora_sw_fs: "/ora"
+ora_sw_fs_size: 115G
 ru_tgt_path: "{{ora_sw_fs}}/RU19"
 ora_inventory: "{{ora_sw_fs}}/oraInventory"
 ora_base: "{{ora_sw_fs}}/base"
@@ -84,26 +87,26 @@ ora_home: "{{ora_sw_fs}}/product/{{ora_version}}/database"
 
 ora_data_vg: oradatavg
 ora_data_vg_disk:  ['hdisk3','hdisk4']
-ora_data_fs: /oradata 
+ora_data_fs: /oradata
 ora_data_fs_size: 5G
 ora_db_fs_list:
   - { fs_name: "/datafiles", size: "8G" }
   - { fs_name: "/controlfiles", size: "2G" }
   - { fs_name: "/redologs", size: "4G", bs: 512  }
-  
+
 # Fill When DB lies on ASM
 
-grid_asm_flag: true 
-grid_ora_home: "{{ora_sw_fs}}/grid/home"
+grid_asm_flag: true
+grid_ora_home: "{{ ora_sw_fs }}/grid/home"
 
 # Grid reponsefile parameter
 ora_grid_user: grid
 ora_grid_user_uid: 601
 asm_sys_password: oracle
-asm_diskgroup_name: DATA
+asm_diskgroup_name: DATA6
 asm_diskgroup_redundancy: EXTERNAL
 asm_diskgroup_ausize: 4
-asm_diskgroup_disk: ['hdisk20','hdisk21']
+asm_diskgroup_disk: ['hdisk6']
 asm_disk_loc_prefix: "/dev/r"
 asm_diskdiscoverystring: "{{asm_disk_loc_prefix}}hdisk*"
-asm_asmsnmp_password: oracle
+asm_asmsnmp_password: Oracle4u
