@@ -1,6 +1,6 @@
 # Copyright (c) IBM Corporation 2021
 # tasks file for AIX config for Oracle Single Instance DB 
-# chfs fails if the target size is the same as the current!
+# chfs fails if the target size is the same as the current
 
 - name: Run initialization tasks
   include_tasks: init.yml
