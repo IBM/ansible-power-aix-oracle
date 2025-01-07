@@ -9,7 +9,7 @@ namespace: ibm
 name: power_aix_oracle
 
 # The version of the collection. Must be compatible with semantic versioning
-version: 1.2.1
+version: 1.2.2
 
 # The path to the Markdown (.md) readme file. This path is relative to the root of the collection
 readme: README.md
@@ -20,6 +20,7 @@ authors:
 - bhargavaram akula <bhargaku@in.ibm.com>
 - Sudhindra Kumasagi <sudhindra.kumasagi@ibm.com>
 - Stephan Navarro <stephan.navarro@fr.ibm.com>
+- Shiva Laveti <shiva.laveti@ibm.com>
 ### OPTIONAL but strongly recommended
 
 # A short summary description of the collection
