@@ -65,8 +65,8 @@ ora_db_fs_list:
 ora_binary_location: nfs
 
 # Set the below values if  "ora_binary_location=nfs"
-ora_nfs_host: 129.40.76.243
-ora_nfs_device: /u01/gold_image
+ora_nfs_host: 192.168.1.1
+ora_nfs_device: /staging
 ora_nfs_filesystem: /staging
 
 # Provide full path of the s/w as per the above "ora_binary_location" type.

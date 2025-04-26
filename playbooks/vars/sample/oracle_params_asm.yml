@@ -66,7 +66,7 @@ ora_sw_fs_size: 99G
 ora_binary_location: nfs
 
 # Set the below values if  "ora_binary_location=nfs"
-ora_nfs_host: 129.40.76.1
+ora_nfs_host: 192.168.1.1
 ora_nfs_device: /repos
 ora_nfs_filesystem: /repos
 

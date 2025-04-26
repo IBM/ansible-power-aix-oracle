@@ -5,7 +5,7 @@
 vm_name: "oravm"
 cimage_id: "9437d7e3-14de-4865-a13b-12479fa05909"
 vm_profile: "medium"
-vm_network: "Network129"
+vm_network: "Network192"
 orasw_vg_disk_size: 100
 data_disk_count: 3 
 data_disk_size: 20
@@ -16,7 +16,7 @@ powervc_storage_template: "FS5000 base template"
 # Below are the variables that are needed for Oracle Deployment
 
 # Provide the ansible work directory on target system
-work_dir: /tmp/si_refactor
+work_dir: /tmp/ansible
 
 # Oracle Version which is going to be installed. It should be mentioned as a 5 digit number, example: 19.3.0.0.0
 ora_version: 19c
@@ -91,7 +91,7 @@ ora_db_fs_list:
 ora_binary_location: nfs
 
 # Set the below values if  "ora_binary_location=nfs"
-ora_nfs_host: 129.40.76.1
+ora_nfs_host: 192.168.1.1
 ora_nfs_device: /repos
 ora_nfs_filesystem: /repos
 
