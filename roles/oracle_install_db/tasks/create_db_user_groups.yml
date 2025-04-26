@@ -1,0 +1,25 @@
+- name: Creating group {{ora_group}} with gid {{ora_group_gid}}
+  ansible.builtin.group:
+    name: "{{ora_group}}"
+    gid:  "{{ora_group_gid}}"
+    state: present
+
+- name: Creating group {{ora_oinstall_group}} with gid {{ora_oinstall_group_gid}}
+  ansible.builtin.group:
+    name: "{{ora_oinstall_group}}"
+    gid:  "{{ora_oinstall_group_gid}}"
+    state: present
+
+- name: Creating group {{ora_oper_group}} with gid {{ora_oper_group_gid}}
+  ansible.builtin.group:
+    name: "{{ora_oper_group}}"
+    gid:  "{{ora_oper_group_gid}}"
+    state: present
+
+- name: Creating user {{ora_user}} with uid {{ora_user_uid}}
+  ansible.builtin.user:
+    name: "{{ora_user}}"
+    group: "{{ora_oinstall_group}}"
+    groups: "{{ora_group}},{{ora_oper_group}}"
+    append: yes
+    uid: "{{ora_user_uid}}"

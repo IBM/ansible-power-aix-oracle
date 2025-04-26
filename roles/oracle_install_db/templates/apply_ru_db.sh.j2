@@ -1,0 +1,19 @@
+#!/bin/bash
+# Copyright (c) IBM Corporation 2025
+
+su - {{ ora_user }} << EOF
+
+# Patching
+
+if [ ! -f {{ done_dir }}/patch.install.{{ item.oh }}.done ] && [ -f {{ done_dir }}/oracle.install.{{ item.oh }}.done ] && [ {{ apply_ru }} == True ]; then
+   {{ item.oracle_home }}/OPatch/opatchauto apply {{ ru_stage }}/{{ patchid }} -binary -oh {{ item.oracle_home }} > {{ logs_dir }}/oracle_patch.{{ item.oh }}.out 2>&1
+   if grep -q 'Patches successfully applied' {{ logs_dir }}/oracle_patch.{{ item.oh }}.out; then
+      touch {{ done_dir }}/patch.install.{{ item.oh }}.done
+      echo "INFO: RU Patch {{ patchid }} applied successfully"
+   else
+      echo "ERROR: Failed to apply {{ patchid }}. Please check {{ logs_dir }}/oracle_patch.{{ item.oh }}.out for details."
+      exit 1
+   fi
+fi
+
+exit 0 

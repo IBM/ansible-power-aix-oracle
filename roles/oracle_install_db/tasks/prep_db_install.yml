@@ -1,0 +1,138 @@
+- name: Set Fact Target hostname for remote copy
+  ansible.builtin.set_fact:
+     targethost: "{{ ansible_host }}"
+
+- name: Creating NFS filesystem from nfshost.
+  ibm.power_aix.filesystem:
+    device: "{{ ora_nfs_device }}"
+    nfs_server: "{{ ora_nfs_host }}"
+    filesystem: "{{ ora_nfs_filesystem }}"
+    state: present
+  when: ora_binary_location == 'nfs' and not grid_asm_flag
+  ignore_errors: True
+  no_log: True
+
+- name: Creating DB Home Directory
+  ansible.builtin.file:
+    dest="{{ item.oracle_home }}"
+    owner="{{ ora_user }}"
+    group="{{ ora_oinstall_group }}"
+    state=directory
+  loop: "{{ required_homes }}"
+  when: sw_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+
+- name: Extracting DB S/W from local/nfs
+  ansible.builtin.shell: "unzip -o {{ database_sw }} -d {{ item.oracle_home }} && touch {{ done_dir }}/{{ item.oh }}.dbswunzip.done"
+  become_user: "{{ ora_user }}"
+  become_method: su
+  become: yes
+  loop: "{{ required_homes }}"
+  when:
+    - sw_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+    - ora_binary_location in ['local','nfs']
+
+- block:
+  - name: Copy DB S/W from remote
+    ansible.builtin.shell: scp {{ database_sw }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
+    delegate_to: localhost
+  - name: Extracting DB S/W files (Remote)
+    ansible.builtin.shell: "unzip -o {{ files_dir }}/{{ database_sw | basename }} -d {{ item.oracle_home }} && touch {{ done_dir }}/{{ item.oh }}.dbswunzip.done"
+    become_user: "{{ ora_user }}"
+    become_method: su
+    become: yes
+    loop: "{{ required_homes }}"
+    when: 
+      - sw_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+  - name: Removing {{ files_dir }}/{{ database_sw | basename }}
+    ansible.builtin.shell: rm -rf {{ files_dir }}/{{ database_sw | basename }}
+  when: ora_binary_location == 'remote'
+
+- name: Checking if RU is extracted
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/{{ patchid }}.ruunzip.done"
+  register: ru_unzipped
+
+- name: Creating RU Stage Directory
+  ansible.builtin.file:
+    dest="{{ ru_stage }}"
+    owner="{{ ora_user }}"
+    group="{{ ora_oinstall_group }}"
+    state=directory
+  when: apply_ru
+
+- block:
+   - name: Extracting RU files from local/nfs
+     ansible.builtin.shell: "unzip -o {{ ru_file }} -d {{ ru_stage }} && chmod -R 775 {{ ru_stage }}"
+     become_method: su
+     become_user: "{{ ora_user }}"
+     become: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ done_dir }}/ruunzip.done"
+  when:
+    - not grid_asm_flag
+    - ora_binary_location in ['local','nfs']
+    - not ru_unzipped.stat.exists
+    - apply_ru
+
+- block:
+   - name: Copy RU files from remote
+     ansible.builtin.shell: scp {{ ru_file }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
+     delegate_to: localhost
+   - name: Extracting RU files
+     ansible.builtin.shell: "unzip -o {{ files_dir }}/{{ ru_file | basename }} -d {{ ru_stage }} && chmod -R 775 {{ ru_stage }}"
+     become_method: su
+     become_user: "{{ ora_user }}"
+     become: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ done_dir }}/ruunzip.done"
+   - name: Removing {{ files_dir }}/{{ ru_file | basename }}
+     ansible.builtin.shell: rm -rf {{ files_dir }}/{{ ru_file | basename }}
+  when:
+    - not grid_asm_flag
+    - ora_binary_location == 'remote'
+    - not ru_unzipped.stat.exists
+    - apply_ru
+
+- name: Backup Opatch
+  ansible.builtin.shell: mv {{ item.oracle_home }}/OPatch {{ item.oracle_home }}/OPatch.bkup
+  loop: "{{ required_homes }}"
+  loop_control:
+    label: "{{ item.oracle_home }}"
+  when:
+    - apply_ru
+    - op_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+  register: opbkp
+  failed_when: opbkp.rc not in [0,1,2]
+
+- block:
+  - name: Copy OPatch from remote
+    ansible.builtin.shell: scp {{ opatch_file }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
+    delegate_to: localhost
+  - name: Extracting OPatch into Oracle Homes (Remote)
+    ansible.builtin.shell: "unzip -o {{ files_dir }}/{{ opatch_file | basename }} -d {{ item.oracle_home }} && touch {{ done_dir}}/{{ item.oh }}.dbopunzip.done"
+    become: yes
+    become_user: "{{ ora_user }}"
+    become_method: su
+    loop: "{{ required_homes }}"
+    loop_control:
+      label: "{{ item.oracle_home }}"
+    when:
+      - op_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+  - name: Removing {{ files_dir }}/{{ opatch_file | basename }}
+    ansible.builtin.shell: rm -rf {{ files_dir }}/{{ opatch_file | basename }}
+  when:
+    - apply_ru
+    - ora_binary_location == 'remote'
+
+- name: Extracting OPatch from local|nfs
+  ansible.builtin.shell: "unzip -o {{ opatch_file  }} -d {{ item.oracle_home }} && touch {{ done_dir}}/{{ item.oh }}.dbopunzip.done"
+  become: yes
+  become_user: "{{ ora_user }}"
+  become_method: su
+  loop: "{{ required_homes }}"
+  loop_control:
+    label: "{{ item.oracle_home }}"
+  when:
+    - apply_ru
+    - ora_binary_location in ['local','nfs']
+    - op_unzipped.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true

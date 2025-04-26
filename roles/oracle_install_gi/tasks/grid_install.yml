@@ -1,0 +1,101 @@
+- name: Checking if 19c Grid is installed
+  ansible.builtin.stat:
+      path: "{{ done_dir }}/grid.install.done"
+  register: installdone
+
+- name: Checking freespace in Grid Installation Path {{ grid_ora_home }}
+  ansible.builtin.shell: "df -g {{ grid_ora_home }} |tail -1|awk '{print $3}'"
+  register: grid_ora_home_freespace
+  changed_when: false
+
+- name: Fail if the space is insufficient in {{ grid_ora_home }}
+  ansible.builtin.fail:
+    msg: Insufficient freespace for {{ grid_ora_home }} (80GB freespace required).
+  when: 
+   - not installdone.stat.exists
+   - apply_ru
+   - grid_ora_home_freespace is defined
+   - grid_ora_home_freespace.stdout|int < 80
+
+- name: Template out myruncluvfy.sh
+  ansible.builtin.template:
+   src:  templates/myruncluvfy.sh.j2
+   dest: "{{ scripts_dir }}/myruncluvfy.sh"
+   mode: '755'
+  tags: runcluvfy
+
+- name: Run myruncluvfy.sh
+  ansible.builtin.command:
+   cmd: "./myruncluvfy.sh"
+   chdir: "{{ scripts_dir }}"
+  register: myruncluvfy_out
+  become: yes
+  become_user: "{{ ora_grid_user }}"
+  become_method: su
+  changed_when: myruncluvfy_out.stdout is search('changed')
+  ignore_errors: True
+  tags: runcluvfy
+
+- name: Read Cluvfy output file
+  ansible.builtin.slurp:
+    src: "{{ logs_dir }}/myruncluvfy.out"
+  register: slurped_file
+  tags: runcluvfy
+
+- name: Decode the file content
+  ansible.builtin.set_fact: 
+    cluvfy_content: "{{ slurped_file.content | b64decode }}"
+  tags: runcluvfy
+
+- name: Fail if cluvfy reports any errors
+  ansible.builtin.fail:
+    msg: "runcluvfy failed. Check the output in {{ logs_dir }}/myruncluvfy.out."
+  when: "(ignoreprecheck | default(false) == false) and ('FAILED' in cluvfy_content)"
+  tags: runcluvfy
+
+- block:
+  - name: Get Patch ID
+    ansible.builtin.shell: "expr {{ ru_file }} : '^.*p\\([0-9]*\\)_.*$'"
+    register: patch_id
+
+  - name: Set Patch ID
+    ansible.builtin.set_fact:
+      patchid: "{{ patch_id.stdout }}"
+  when: apply_ru
+
+- name: Executing rootpre.sh
+  ansible.builtin.shell: "{{ grid_ora_home }}/clone/rootpre.sh"
+
+- name: Templating out Grid Response File
+  ansible.builtin.template:
+    src: oracle19c_grid_install.rsp
+    dest: "{{ files_dir }}/{{ response_file }}"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0644'
+
+- name: Templating out grid_install.sh Script
+  ansible.builtin.template:
+    src: grid_install.sh.j2
+    dest: "{{ scripts_dir }}/grid_install.sh"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0755'
+
+- name: Installation of Standalone Grid Infrastructure
+  ansible.builtin.command: "ksh93 {{ scripts_dir }}/grid_install.sh"
+  register: grid_install_out
+- debug: var=grid_install_out.stdout
+
+- name: Templating out apply_ru_gi.sh Script
+  ansible.builtin.template:
+    src: apply_ru_gi.sh.j2
+    dest: "{{ scripts_dir }}/apply_ru_gi.sh"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0755'
+  when: apply_ru
+
+- name: Applying the patch
+  ansible.builtin.command: "ksh93 {{ scripts_dir }}/apply_ru_gi.sh"
+  when: apply_ru

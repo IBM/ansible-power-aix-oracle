@@ -1,0 +1,107 @@
+- name: Run initialization tasks
+  ansible.builtin.include_role:
+    name: ibm.power_aix_oracle.preconfig
+    tasks_from: init.yml
+
+- name: Include create_gi_user_groups.yml task
+  ansible.builtin.include_tasks: create_gi_user_groups.yml
+
+- name: Preparing ASM disks
+  ansible.builtin.include_tasks: pre_asm_disks.yml
+  with_items: "{{ asm_diskgroup_disk }}"
+  loop_control:
+    loop_var: item
+  
+- name: Creating Volume Group for S/W Installation
+  ibm.power_aix.lvg:
+    vg_name: "{{ ora_sw_vg }}"
+    pp_size: 32 
+    vg_type: scalable
+    state: present
+    pvs: "{{ ora_sw_vg_disk }}"
+  when : ora_sw_vg != "rootvg"
+
+- name: Creating Filesystem for S/W Installation
+  ibm.power_aix.filesystem:
+    filesystem: "{{ ora_sw_fs }}"
+    state: present
+    attributes: "size={{ ora_sw_fs_size }}"
+    vg: "{{ ora_sw_vg }}"
+    auto_mount: True
+
+- name: Mount the Filesystem for S/W Installation
+  ibm.power_aix.mount: 
+    mount_dir: "{{ ora_sw_fs }}"
+    state: mount
+  ignore_errors: yes
+
+- name: Creating Oracle Base directory
+  ansible.builtin.file:
+    path: "{{ ora_base }}"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    state: directory
+    mode: '0775'
+
+- name: Creating Oracle Inventory directory
+  ansible.builtin.file:
+    path: "{{ ora_inventory }}"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    state: directory
+    mode: '0775'
+
+- name: Include prep_gi_install.yml task
+  ansible.builtin.include_tasks: prep_gi_install.yml
+
+- name: Include grid_install.yml task
+  ansible.builtin.include_tasks: grid_install.yml
+
+- name: Checking if root script was already executed
+  ansible.builtin.stat:
+   path: "{{ done_dir }}/rootscript.done"
+  register: configdone
+
+- name: Templating out rootscript.sh
+  template:
+    src: grid_root.sh.j2
+    dest: "{{ scripts_dir }}/grid_root.sh"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0755'    
+
+- name: Executing rootscript.sh
+  ansible.builtin.command: "ksh93 {{ scripts_dir }}/grid_root.sh"
+  register: rootscript_out
+- ansible.builtin.debug: var=rootscript_out.stdout
+
+- name: Post Grid Installation | Copying config_tools.sh
+  template:
+    src: config_tools.sh.j2
+    dest: "{{ scripts_dir }}/config_tools.sh"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0755'
+
+- name: Executing orainstRoot.sh
+  ansible.builtin.shell:
+    cmd: "{{ ora_inventory }}/orainstRoot.sh"
+
+- name: Post Grid Installation | Executing the Config Tools script
+  ansible.builtin.command: "ksh93 {{ scripts_dir }}/config_tools.sh"
+  register: config_tools_out
+  become: yes
+  become_user: "{{ ora_grid_user }}"
+  become_method: su
+- ansible.builtin.debug: var=config_tools_out.stdout
+
+- name: Post Grid Installation | Checking if Config Tools is successful.
+  ansible.builtin.stat:
+   path: "{{ done_dir }}/configtools.done"
+  register: postinstall
+  tags: poststep
+
+- name: Post Grid Installation | Status of the Services
+  ansible.builtin.shell: "export ORACLE_HOME={{ grid_ora_home }} && {{ grid_ora_home }}/bin/crsctl stat res -t"
+  register: check_services
+- ansible.builtin.debug: var=check_services.stdout_lines

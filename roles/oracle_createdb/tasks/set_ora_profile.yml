@@ -1,0 +1,22 @@
+---
+- name: Get home directory of the user
+  ansible.builtin.shell: "awk -F: '/oracle/ {print $6}' /etc/passwd"
+  register: user_home
+
+- name: Adding environment variables to {{ ora_user }} user profile
+  ansible.builtin.lineinfile:
+   path: "{{ user_home.stdout }}/.profile"
+   state: present
+   line: "{{ item }}"
+   create: yes
+   owner: "{{ ora_user }}"
+   group: "{{ ora_oinstall_group }}"
+   mode: 0775
+  loop:
+   - export TEMP=/tmp
+   - export TMPDIR=/tmp
+   - export TMP=/tmp
+   - export AIXTHREAD_SCOPE=S
+   - export ORACLE_HOME={{ ora_home }}
+   - export ORACLE_SID={{ ora_sid }}
+   - export PATH=$PATH:{{ ora_home }}/bin

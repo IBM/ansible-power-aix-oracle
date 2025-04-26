@@ -1,0 +1,28 @@
+# Copyright (c) IBM Corporation 2024
+# This script executes root.sh script post grid installation for standalone setup
+
+# Idempotent: yes
+
+# Variables
+
+grid_home="{{ grid_ora_home }}"
+rootsh_log="{{ logs_dir }}/rootsh.out"
+apply_ru="{{ apply_ru }}"
+# Main
+
+if [ ! -f {{ done_dir }}/rootsh.done ] && [ $apply_ru == "True" ] && [ -f {{ done_dir }}/grid.patch.done ]; then
+    $grid_home/root.sh > $rootsh_log 2>&1
+elif [ ! -f {{ done_dir }}/rootsh.done ] && [ $apply_ru == "False" ]; then
+    $grid_home/root.sh > $rootsh_log 2>&1
+fi
+
+outlog=$(awk '{print $2}' $rootsh_log)
+if grep -q "Successfully configured Oracle Restart for a standalone server" $outlog; then
+    echo "grid_root.sh completed successfully"
+    touch {{ done_dir }}/rootsh.done
+else
+    echo "grid_root.sh didn't complete successfully. Review the log $outlog on the host lpar"
+    exit 1
+fi
+exit 0
+

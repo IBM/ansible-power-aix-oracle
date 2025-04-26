@@ -1,0 +1,35 @@
+# Copyright (c) IBM Corporation 2023
+# This script executes gridSetup.sh -configtools
+
+# Idempotent: yes
+
+# Variables
+
+grid_home="{{ grid_ora_home }}"
+config_log="{{ logs_dir }}/config.log"
+
+# Main
+
+if [ -f {{ done_dir }}/rootsh.done ] && [ ! -f {{ done_dir }}/configtools.done ]; then
+   if [ {{ ignoreprecheck }} == True ]; then
+      export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -silent -ignorePrereqFailure -executeConfigTools -responseFile {{ files_dir }}/{{ response_file }} > $config_log 2>&1
+   elif [ {{ ignoreprecheck }} == False ]; then
+      export SKIP_ROOTPRE="TRUE" && $grid_home/gridSetup.sh -silent -executeConfigTools -responseFile {{ files_dir }}/{{ response_file }} > $config_log 2>&1
+   else
+      echo "ERROR: root script didn't complete successfully, not proceeding further. Exiting"
+      exit 1	
+   fi
+fi
+
+if grep -q "Successfully Configured Software" $config_log; then
+   touch "{{ done_dir }}/configtools.done"
+   echo "gridSetup.sh -executeConfigTools completed successfully"
+elif grep -q "\[WARNING\]" $config_log; then
+   echo "gridSetup.sh -executeConfigTools completed with [WARNING]."
+   echo "ACTION: Refer to the log $config_log and rerun the playbook"
+   exit 1
+else
+   echo "ERROR: gridSetup.sh -executeConfigTools failed. See $config_log for details."
+   exit 1
+fi
+exit 0

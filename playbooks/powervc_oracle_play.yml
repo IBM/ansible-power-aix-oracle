@@ -18,8 +18,10 @@
   roles: 
     - role: preconfig
       tags: preconfig
-    - role: oracle_install
-      tags: oracle_install
+    - role: oracle_install_gi
+      tags: oracle_install_gi
+    - role: oracle_install_db
+      tags: oracle_install_db
     - role: oracle_createdb
       tags: oracle_createdb
 

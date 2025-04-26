@@ -1,0 +1,147 @@
+- name: Creating Oracle Grid Home directory
+  ansible.builtin.file:
+    path: "{{ grid_ora_home }}"
+    state: directory
+    mode: '0755'
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+
+- name: Checking if Grid S/W is extracted
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/giswunzip.done"
+  register: gisw_unzipped
+  
+- name: Checking if Opatch is extracted
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/giopunzip.done"
+  register: op_unzipped
+  when: apply_ru
+
+- name: Checking if RU is extracted
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/ruunzip.done"
+  register: ru_unzipped
+  when: apply_ru
+
+- name: Creating RU Stage Directory
+  ansible.builtin.file:
+    dest: "{{ ru_stage }}"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    state: directory
+    mode: 0775
+  when: apply_ru
+
+- name: Set Fact Target hostname for remote copy
+  ansible.builtin.set_fact:
+     targethost: "{{ ansible_host }}"
+
+- name: Creating NFS filesystem from nfshost.
+  ibm.power_aix.filesystem:
+    device: "{{ ora_nfs_device }}"
+    nfs_server: "{{ ora_nfs_host }}"
+    filesystem: "{{ ora_nfs_filesystem }}"
+    state: present
+  when: ora_binary_location == 'nfs'
+  ignore_errors: true
+  no_log: true
+
+- block:
+   - name: Extracting RU files from local/nfs
+     ansible.builtin.shell: "unzip -o {{ ru_file }} -d {{ ru_stage }} && chmod -R 775 {{ ru_stage }}"
+     become_method: su
+     become_user: "{{ ora_grid_user }}"
+     become: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ done_dir }}/ruunzip.done"
+  when:
+    - ora_binary_location in ['local','nfs']
+    - ru_unzipped is defined
+    - not ru_unzipped.stat.exists
+    - apply_ru
+
+- block:
+   - name: Copy RU files from remote
+     ansible.builtin.shell: scp {{ ru_file }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
+     delegate_to: localhost
+   - name: Extracting RU files
+     ansible.builtin.shell: "unzip -o {{ files_dir }}/{{ ru_file | basename }} -d {{ ru_stage }} && chmod -R 775 {{ ru_stage }}"
+     become_method: su
+     become_user: "{{ ora_grid_user }}"
+     become: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ done_dir }}/ruunzip.done"
+   - name: Removing {{ files_dir }}/{{ ru_file | basename }}
+     ansible.builtin.shell: rm -rf {{ files_dir }}/{{ ru_file | basename }}
+  when:
+    - ora_binary_location == 'remote'
+    - (ru_unzipped is defined or not ru_unzipped.stat.exists)
+    - apply_ru
+
+- block:
+   - name: Extracting oracle grid source files from local/nfs
+     ansible.builtin.shell: "unzip -o {{ grid_sw }} -d {{ grid_ora_home }}"
+     become_method: su
+     become_user: "{{ ora_grid_user }}"
+     become: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ done_dir }}/giswunzip.done"
+  when:
+    - ora_binary_location in ['local','nfs']
+    - not gisw_unzipped.stat.exists
+
+- block:
+   - name: Copy GI sw files from remote
+     ansible.builtin.shell: scp {{ grid_sw }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
+     delegate_to: localhost
+   - name: Extracting GI sw files
+     ansible.builtin.shell: "unzip -o {{ files_dir }}/{{ grid_sw | basename }} -d {{ grid_ora_home }}"
+     become_user: "{{ ora_grid_user }}"
+     become_method: su
+     become: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ done_dir }}/giswunzip.done"
+   - name: Removing {{ files_dir }}/{{ grid_sw | basename }}
+     ansible.builtin.shell: rm -rf {{ files_dir }}/{{ grid_sw | basename }}
+  when:
+    - ora_binary_location == 'remote'
+    - not gisw_unzipped.stat.exists
+
+- block:
+   - name: Backup Opatch
+     ansible.builtin.shell: mv {{ grid_ora_home }}/OPatch {{ grid_ora_home }}/OPatch.bkup
+     register: opb
+     failed_when: opb.rc not in [0,1,2,3]
+   - name: Copy OPatch from remote
+     ansible.builtin.shell: scp {{ opatch_file }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
+     delegate_to: localhost
+   - name: Extracting OPatch to {{ grid_ora_home }}
+     ansible.builtin.shell: "unzip -o {{ files_dir }}/{{ opatch_file | basename }} -d {{ grid_ora_home }}"
+     become_user: "{{ ora_grid_user }}"
+     become_method: su
+     become: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ done_dir }}/giopunzip.done"
+   - name: Removing {{ files_dir }}/{{ opatch_file | basename }}
+     ansible.builtin.shell: rm -rf {{ files_dir }}/{{ opatch_file | basename }}
+  when:
+    - ora_binary_location == 'remote'
+    - not op_unzipped.stat.exists
+    - apply_ru
+
+- block:
+   - name: Backup Opatch
+     ansible.builtin.shell: mv {{ grid_ora_home }}/OPatch {{ grid_ora_home }}/OPatch.bkup
+     register: opb
+     failed_when: opb.rc not in [0,1,2,3]
+   - name: Extracting OPatch from local/nfs to {{ grid_ora_home }}
+     ansible.builtin.shell: "unzip -o {{ opatch_file  }} -d {{ grid_ora_home }}"
+     become_user: "{{ ora_grid_user }}"
+     become_method: su
+     become: yes
+   - name: Creating the done file
+     ansible.builtin.command: touch "{{ done_dir }}/giopunzip.done"
+  when:
+    - ora_binary_location in ['local','nfs']
+    - not op_unzipped.stat.exists
+    - apply_ru

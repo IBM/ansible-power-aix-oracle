@@ -1,9 +1,0 @@
-#!/bin/bash
-su - {{ ora_grid_user }} <<EOF
-{{ grid_ora_home }}/OPatch/opatchauto apply {{ merged_variable }} -binary -oh {{ grid_ora_home }} > {{ done_dir }}/applyru_gi_gteq_1918.out 2>&1
-if grep -q -i 'opatchauto SUCCEEDED' {{ done_dir }}/applyru_gi_gteq_1918.out; then
-   touch {{ done_dir }}/applyru_gi_done
-else
-   exit 1
-fi
-EOF

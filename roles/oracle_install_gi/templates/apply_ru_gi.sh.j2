@@ -1,0 +1,16 @@
+#!/bin/bash
+# Copyright (c) IBM Corporation 2024
+
+su - {{ ora_grid_user }} << EOF
+
+if [ ! -f "{{ done_dir }}/grid.patch.done" ] && [ -f "{{ done_dir }}/grid.install.done" ]; then
+    {{ grid_ora_home }}/OPatch/opatchauto apply {{ ru_stage }}/{{ patchid }} -binary -oh {{ grid_ora_home }} > {{ logs_dir }}/grid_patch.out 2>&1
+    if grep -q 'Patches successfully applied' {{ logs_dir }}/grid_patch.out; then
+        touch "{{ done_dir }}/grid.patch.done"
+        echo "RU Patch {{ patchid }} applied successfully"
+    else
+        echo "ERROR: Failed to apply $ruid. See $patch_log for details."
+        exit 1
+    fi
+fi
+EOF

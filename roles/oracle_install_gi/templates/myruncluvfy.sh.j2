@@ -19,7 +19,8 @@ check_user_is "{{ ora_user  }}"
 #                                                                              #
 ################################################################################
 
-log="{{ done_dir }}/myruncluvfy.out"
+log="{{ logs_dir }}/myruncluvfy.out"
+done="{{ done_dir}}/mycluvfy.done"
 runit=0
 
 if [ -f $log ]; then
@@ -42,6 +43,7 @@ if [ $runit -eq 1 ]; then
     RES=-1
   else
     RES=0
+    touch $done
   fi
   error_if_non_zero $RES "runcluvfy_ext.sh changed (failed)"
   echo "runcluvfy_ext.sh changed (completed successlly)."
