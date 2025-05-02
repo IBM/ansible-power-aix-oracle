@@ -1,0 +1,157 @@
+---
+# Copyright (c) IBM Corporation 2025
+# tasks file for oracle_deinstall
+- name: Run initialization tasks
+  ansible.builtin.include_tasks: ../../oracle_deinstall/tasks/init.yml
+  when: not init_done is defined
+
+# Skip if done files exist
+- name: Check if deinstall for DB home is already done
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/db_deinstall.done"
+  register: db_deinstall_done_check
+
+- name: Check if deinstall for GRID home is already done
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/grid_deinstall.done"
+  register: grid_deinstall_done_check
+  when:
+    - grid_asm_flag
+
+# Check for inventory entries
+- name: Check inventory for Grid home
+  ansible.builtin.shell: |
+    grep "{{ grid_ora_home }}" "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: check_grid_home
+  ignore_errors: true
+  changed_when: false
+  when:
+    - grid_asm_flag
+    - not grid_deinstall_done_check.stat.exists
+
+- name: Check inventory for Oracle home
+  ansible.builtin.shell: |
+    grep "{{ ora_home }}" "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: check_oracle_home
+  ignore_errors: true
+  changed_when: false
+  when: not db_deinstall_done_check.stat.exists
+
+# Fail if inventory entries are missing
+- name: Fail if Grid home is not in inventory
+  ansible.builtin.fail:
+    msg: "Grid home {{ grid_ora_home }} is not registered in the inventory."
+  when:
+    - check_grid_home.rc is not defined or check_grid_home.rc != 0
+    - grid_asm_flag
+    - not grid_deinstall_done_check.stat.exists
+
+- name: Fail if Oracle home is not in inventory
+  ansible.builtin.fail:
+    msg: "Oracle home {{ ora_home }} is not registered in the inventory."
+  when:
+    - check_oracle_home.rc is not defined or check_oracle_home.rc != 0
+    - not db_deinstall_done_check.stat.exists
+
+- name: Templating out Deinstall script for DB home
+  ansible.builtin.template:
+    src: deinstall_db.sh.j2
+    dest: "{{ scripts_dir }}/deinstall_db.sh"
+    owner: "{{ ora_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0755'
+  when:
+    - not db_deinstall_done_check.stat.exists
+
+- name: Executing Deinstall script for DB home
+  ansible.builtin.command: "ksh93 {{ scripts_dir }}/deinstall_db.sh"
+  changed_when: false
+  when: not db_deinstall_done_check.stat.exists
+
+- name: Get "DB Deinstall Summary"
+  ansible.builtin.shell: find {{ done_dir }}/ -type f -name "db_deinstall.out" -exec sed -n '/DEINSTALL CLEAN OPERATION SUMMARY/,$p' {} \;
+  changed_when: false
+  register: grep_output
+
+- name: Display the Summary
+  ansible.builtin.debug:
+    msg: "{{ grep_output.stdout_lines }}"
+
+- name: Deinstall Grid and RDBMS Homes
+  when: grid_asm_flag
+  block:
+    - name: Templating out Deinstall script for Grid home
+      ansible.builtin.template:
+        src: deinstall_grid.sh.j2
+        dest: "{{ scripts_dir }}/deinstall_grid.sh"
+        owner: "{{ ora_grid_user }}"
+        group: "{{ ora_oinstall_group }}"
+        mode: '0755'
+      when: not grid_deinstall_done_check.stat.exists
+
+    - name: Executing Deinstall script for Grid home
+      ansible.builtin.command: "ksh93 {{ scripts_dir }}/deinstall_grid.sh"
+      changed_when: false
+      when: not grid_deinstall_done_check.stat.exists
+
+#  Root Deinstall Task
+# Extract the rootdeinstall script path if the done file exists
+    - name: Check if grid_deinstall.done exists
+      ansible.builtin.stat:
+        path: "{{ done_dir }}/grid_deinstall.done"
+      register: grid_deinstall_done_stat
+
+    - name: Extract the rootdeinstall script path
+      ansible.builtin.shell: "awk -F'\"' '/As the privileged user, execute/ {print $2}' '{{ done_dir }}/grid_deinstall.out' | sort -u"
+      changed_when: false
+      when: grid_deinstall_done_stat.stat.exists
+      register: root_deinstall_script_path
+
+# Run the rootdeinstall script if path is extracted
+    - name: Run the rootdeinstall script
+      ansible.builtin.shell: "{{ root_deinstall_script_path.stdout }} >> {{ done_dir }}/grid_rootdeinstall.out 2>&1"
+      changed_when: false
+      when: root_deinstall_script_path.stdout is defined
+
+# Check if the rootdeinstall was successful and touch done file
+    - name: Check if rootdeinstall output exists
+      ansible.builtin.stat:
+        path: "{{ done_dir }}/grid_rootdeinstall.out"
+      register: rootdeinstall_output_stat
+
+    - name: Check if deinstallation was successful
+      ansible.builtin.command: grep -q -i 'Oracle deinstall tool successful' "{{ done_dir }}/grid_rootdeinstall.out"
+      register: deinstall_success_check
+      failed_when: false
+      changed_when: false
+      when: rootdeinstall_output_stat.stat.exists
+
+    - name: Create a flag file if deinstallation succeeded
+      ansible.builtin.file:
+        path: "{{ done_dir }}/grid_rootdeinstall.done"
+        state: touch
+        owner: {{ ora_user }}
+        group: {{ ora_oinstall_group }}
+        mode: '0644'
+      when:
+        - rootdeinstall_output_stat.stat.exists
+        - deinstall_success_check.rc == 0
+
+    - name: Log an error message if deinstallation failed
+      ansible.builtin.lineinfile:
+        path: "{{ done_dir }}/gi_rootdeinstall_debug.log"
+        create: true
+        line: "Error: Deinstallation failed!"
+      when:
+        - rootdeinstall_output_stat.stat.exists
+        - deinstall_success_check.rc != 0
+
+# Get "Grid Deinstall Summary"
+    - name: Get "Grid Deinstall Summary"
+      ansible.builtin.shell: find {{ done_dir }}/ -type f -name "grid_rootdeinstall.out" -exec sed -n '/DEINSTALL CLEAN OPERATION SUMMARY/,$p' {} \;
+      register: grep_output
+      changed_when: false
+
+    - name: Display the Grid Deinstall Summary
+      ansible.builtin.debug:
+        msg: "{{ grep_output.stdout_lines }}"

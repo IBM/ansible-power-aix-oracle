@@ -1,0 +1,18 @@
+# Copyright (c) IBM Corporation 2021
+# This file is defining Oracle Variables needed for oracle single instance installation
+
+# Provide the ansible work directory on target system
+work_dir:   &work_dir "/tmp/ansible"
+
+ora_user: oracle
+ora_oinstall_group: oinstall
+ora_inventory: /u01/oraInventory
+ora_home: /u01/product/19c/database
+
+# Fill When DB lies on ASM
+
+grid_asm_flag: true
+grid_ora_home: /u01/grid/home
+
+# Grid reponsefile parameter
+ora_grid_user: grid

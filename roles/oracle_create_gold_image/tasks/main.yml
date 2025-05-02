@@ -1,0 +1,120 @@
+---
+# Copyright (c) IBM Corporation 2025
+# tasks file for oracle_install
+- name: Run initialization tasks
+  ansible.builtin.include_tasks: ../../oracle_create_gold_image/tasks/init.yml
+  when: not init_done is defined
+
+# Check for inventory entries
+- name: Check inventory for Grid home
+  ansible.builtin.shell: |
+    grep "{{ grid_ora_home }}" "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: check_grid_home
+  ignore_errors: true
+  changed_when: false
+  when: grid_asm_flag
+
+- name: Check inventory for Oracle home
+  ansible.builtin.shell: |
+    grep "{{ ora_home }}" "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: check_oracle_home
+  ignore_errors: true
+  changed_when: false
+
+# Fail if inventory entries are missing
+- name: Fail if Grid home is not in inventory
+  ansible.builtin.fail:
+    msg: "Grid home {{ grid_ora_home }} is not registered in the inventory."
+  when:
+    - check_grid_home.rc != 0
+    - grid_asm_flag
+
+- name: Fail if Oracle home is not in inventory
+  ansible.builtin.fail:
+    msg: "Oracle home {{ ora_home }} is not registered in the inventory."
+  when: check_oracle_home.rc != 0
+
+# Ensure enough free space in goldimage_destination
+- name: Checking freespace in {{ goldimage_destination }}
+  ansible.builtin.shell: "df -g {{ goldimage_destination }} |tail -1|awk '{print $3}'"
+  register: grid_home_freespace
+  changed_when: false
+
+- name: Fail if insufficient freespace for {{ goldimage_destination }}
+  ansible.builtin.fail:
+    msg: "Insufficient freespace for {{ goldimage_destination }}."
+  when:
+    - (grid_asm_flag and grid_home_freespace.stdout | int < 20) or
+      (not grid_asm_flag and grid_home_freespace.stdout | int < 10)
+
+# Skip if done files exist
+- name: Check if gold image for Grid home is already created
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/grid_gold_image.done"
+  register: grid_done_check
+  when:
+    - grid_asm_flag
+
+- name: Templating out CreateGoldImage script for Grid Home
+  ansible.builtin.template:
+    src: create_gi_grid.sh.j2
+    dest: "{{ scripts_dir }}/create_gi_grid.sh"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0644'
+  when:
+    - not grid_done_check.stat.exists
+    - grid_asm_flag
+
+- name: Executing CreateGoldImage script for Grid Home
+  ansible.builtin.command: "ksh93 {{ scripts_dir }}/create_gi_grid.sh"
+  changed_when: false
+  when:
+    - not grid_done_check.stat.exists
+    - grid_asm_flag
+
+# Display location of Grid Home gold image ZIP file
+
+- name: Locate Grid Home gold image file
+  ansible.builtin.shell: |
+    find "{{ goldimage_destination }}" -type f -name "grid_home_*.zip" -print
+  register: grid_file_location
+  changed_when: false
+
+- name: Debug Grid Home gold image file location
+  ansible.builtin.debug:
+    msg: "Grid Home gold image file : {{ grid_file_location.stdout }}"
+  when: grid_file_location.stdout != ""
+
+# Create gold image for DB home
+- name: Check if gold image for DB home is already created
+  ansible.builtin.stat:
+    path: "{{ done_dir }}/db_gold_image.done"
+  register: db_done_check
+
+- name: Templating out CreateGoldImage script for DB home
+  ansible.builtin.template:
+    src: create_gi_db.sh.j2
+    dest: "{{ scripts_dir }}/create_gi_db.sh"
+    owner: "{{ ora_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0644'
+  when: not db_done_check.stat.exists
+
+- name: Executing CreateGoldImage script for DB Home
+  ansible.builtin.command: "ksh93 {{ scripts_dir }}/create_gi_db.sh"
+  changed_when: false
+  when: not db_done_check.stat.exists
+
+# Display location of DB Home gold image ZIP file
+
+- name: Locate DB Home gold image file
+  ansible.builtin.shell: |
+    find "{{ goldimage_destination }}" -type f -name "db_home_*.zip" -print
+  register: db_file_location
+  changed_when: false
+
+- name: Debug DB Home gold image file location
+  ansible.builtin.debug:
+    msg: "DB Home gold image file : {{ db_file_location.stdout }}"
+  when: db_file_location.stdout != ""

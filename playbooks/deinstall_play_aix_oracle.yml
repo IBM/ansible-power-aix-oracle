@@ -1,0 +1,8 @@
+---
+- name: Playbook
+  hosts: all
+  gather_facts: true
+  vars_files: vars/deinstall_oracle_params.yml
+  roles:
+    - role: oracle_deinstall
+      tags: oracle_deinstall

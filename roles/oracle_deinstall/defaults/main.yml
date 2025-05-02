@@ -1,0 +1,11 @@
+---
+# defaults file for oracle_create_gold_image
+
+
+scripts_dir: [ "{{ work_dir }}", "scripts" ]
+done_dir:    [ "{{ work_dir }}", "done" ]
+
+prenfsconfig:
+ lpp_src:
+    # !!! update !!!
+    subdir: ''
