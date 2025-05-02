@@ -1,0 +1,49 @@
+---
+# Copyright (c) IBM Corporation 2025
+
+- name: Include create_db_user_groups.yml task
+  ansible.builtin.include_tasks: create_db_user_groups.yml
+
+- block:
+   - name: Creating Volume Group for S/W Installation
+     ibm.power_aix.lvg:
+       vg_name: "{{ ora_sw_vg }}"
+       pp_size: 32
+       vg_type: scalable
+       state: present
+       pvs: "{{ ora_sw_vg_disk }}"
+     when : ora_sw_vg != "rootvg"
+
+   - name: Creating Filesystem for S/W Installation
+     ibm.power_aix.filesystem:
+       filesystem: "{{ ora_sw_fs }}"
+       state: present
+       attributes: "size={{ ora_sw_fs_size }}"
+       vg: "{{ ora_sw_vg }}"
+       auto_mount: True
+
+   - name: Mount the Filesystem for S/W Installation
+     ibm.power_aix.mount:
+       mount_dir: "{{ ora_sw_fs }}"
+       state: mount
+     ignore_errors: yes
+
+   - name: Creating Oracle Base directory
+     ansible.builtin.file:
+       path: "{{ ora_base }}"
+       owner: "{{ ora_user }}"
+       group: "{{ ora_oinstall_group }}"
+       state: directory
+       mode: '0775'
+
+   - name: Creating Oracle Inventory directory
+     ansible.builtin.file:
+       path: "{{ ora_inventory }}"
+       owner: "{{ ora_user }}"
+       group: "{{ ora_oinstall_group }}"
+       state: directory
+       mode: '0775'
+  when: not grid_asm_flag
+
+- name: Oracle Installation
+  ansible.builtin.import_tasks: oracle_install.yml

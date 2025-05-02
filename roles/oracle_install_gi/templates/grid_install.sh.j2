@@ -1,0 +1,27 @@
+#!/bin/bash
+# Copyright (c) IBM Corporation 2024
+
+su - {{ ora_grid_user }} << EOF
+
+# Installation
+
+if [ ! -f "{{ done_dir }}/grid.install.done" ]; then
+   if [ {{ ignoreprecheck }} == True ]; then
+       export SKIP_ROOTPRE="TRUE" && {{ grid_ora_home }}/gridSetup.sh -silent -ignorePrereqFailure -responsefile {{ files_dir }}/{{ response_file }} > {{ logs_dir }}/grid_install.out 2>&1
+   elif [ {{ ignoreprecheck }} == False ]; then
+       export SKIP_ROOTPRE="TRUE" && {{ grid_ora_home }}/gridSetup.sh -silent -responsefile {{ files_dir }}/{{ response_file }} > {{ logs_dir }}/grid_install.out 2>&1
+   else
+       echo "ERROR: gridSetup.sh failed. See {{ logs_dir }}/grid_install.out for details."
+       exit 1
+   fi
+fi
+
+if grep -q 'Successfully Setup Software' {{ logs_dir }}/grid_install.out; then
+   touch "{{ done_dir }}/grid.install.done"
+   echo "INFO: gridSetup.sh completed successfully."
+else
+   echo "ERROR: gridSetup.sh failed. See {{ logs_dir }}/grid_install.out for details."
+   exit 1
+fi
+
+EOF

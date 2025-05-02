@@ -1,11 +1,7 @@
-#block:
-
-
 - name: Check whether filesystem is mounted
-  stat:
+  ansible.builtin.stat:
     path: "{{ ora_data_fs }}/{{ ora_sid }}{{ item.fs_name }}"
   register: fs_stat
-
 
 - name: create {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}} filesystem
   ibm.power_aix.filesystem:
@@ -21,12 +17,14 @@
     mount_dir: "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
     state: mount
   ignore_errors: yes
+
 - name: Checking permission of {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}
-  stat:
+  ansible.builtin.stat:
     path: "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
   register: ora_dir
-- name: changing ownership to {{ora_user}} on {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}
-  file:
+
+- name: Changing ownership to {{ora_user}} on {{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}
+  ansible.builtin.file:
     path: "{{ora_data_fs}}/{{ora_sid}}{{item.fs_name}}"
     state: directory
     recurse: yes
@@ -34,5 +32,3 @@
     group: "{{ora_group}}"
     mode: '0775'
   when: ora_dir.stat.exists and ora_dir.stat.pw_name != ora_user
-  
-#with_items: "{{ ora_db_fs_list }}"  

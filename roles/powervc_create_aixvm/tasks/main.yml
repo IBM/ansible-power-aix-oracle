@@ -14,25 +14,19 @@
     key_name: ssh_key
     timeout: 600
   register: vm
-#- debug:
-#    msg: "{{ vm.server }}"
 
 - name: List VM details "{{ vm_name }}"
   openstack.cloud.server_info:
     name: "{{ vm_name }}"
   register: vm1
-#- debug:
-#    msg: "{{ vm1 }}"
-#- debug:
-#    msg: "{{ vm1.servers[0].access_ipv4 }}"
 
 
 - name: set hostip with  VM's public IP address
-  set_fact:
+  ansible.builtin.set_fact:
     hostip: "{{ vm1.servers[0].access_ipv4 }}"
 
 - name: Wait for SSH port 22 to be available online on VM
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ hostip }}"
     port: 22
 
@@ -50,8 +44,8 @@
     volume: "{{ vm_name }}_oraswvg"
 
 - name: Create and attach Data disks
-  include_tasks: disk_create_attach.yml
+  ansible.builtin.include_tasks: disk_create_attach.yml
   loop: "{{ range(1, data_disk_count + 1, 1)|list }}"
 
 - name: Update the ansible inventory file with vm details
-  include_tasks: update_inventory.yml
+  ansible.builtin.include_tasks: update_inventory.yml

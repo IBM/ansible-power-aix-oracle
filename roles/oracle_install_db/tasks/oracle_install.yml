@@ -1,0 +1,133 @@
+---
+- name: Run initialization tasks
+  ansible.builtin.include_role:
+    name: ibm.power_aix_oracle.preconfig
+    tasks_from: init.yml
+
+- name: Check if inventory.xml exists
+  ansible.builtin.stat:
+    path: "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: inventory_file
+
+- name: Read Oracle Inventory File if it exists
+  ansible.builtin.slurp:
+    path: "{{ ora_inventory }}/ContentsXML/inventory.xml"
+  register: inv_oh
+  when: inventory_file.stat.exists
+  ignore_errors: true
+  no_log: true
+
+- name: Decode inventory.xml content if available
+  ansible.builtin.set_fact:
+    input_lines: "{{ inv_oh.content | b64decode | string | split('\n') }}"
+  when: inventory_file.stat.exists and inv_oh is defined and inv_oh.content is defined
+
+- name: Prepare list of Oracle Homes for installation
+  ansible.builtin.set_fact:
+    required_homes: >-
+      {{
+        required_homes | default([]) + [{
+          'oh': item.ora_home | regex_replace('/', ''),
+          'oracle_home': item.ora_home
+        }]
+      }}
+  loop: "{{ databases }}"
+  when: input_lines is not defined or
+        (input_lines | select('search', '(?i)(?!.*REMOVED).*' + (item.ora_home | regex_escape)) | list | length == 0)
+
+- name: Preparing a list of Oracle Homes defined in the Variables file
+  ansible.builtin.set_fact:
+    db_homes_list: "{{ db_homes_list | default([]) + [{'oh': item.ora_home | regex_replace('/',''), 'oracle_home': item.ora_home }] }}"
+  loop: "{{ databases }}"
+  vars:
+    oraclehomes: "{{ item | regex_escape }}"
+
+- name: Checking if DB S/W is extracted
+  ansible.builtin.stat:
+   path: "{{ done_dir }}/{{ item.oh }}.dbswunzip.done"
+  register: sw_unzipped
+  loop: "{{ db_homes_list }}"
+
+- name: Checking if root.sh is run
+  ansible.builtin.stat:
+   path: "{{ done_dir }}/{{ item.oh }}.rootdone"
+  register: rootdone
+  loop: "{{ db_homes_list }}"
+  when: db_homes_list is defined
+
+- block:
+  - name: Checking if OPatch is extracted
+    ansible.builtin.stat:
+      path: "{{ done_dir }}/{{ item.oh }}.dbopunzip.done"
+    register: op_unzipped
+    loop: "{{ db_homes_list }}"
+
+  - name: Get Patch ID
+    ansible.builtin.shell: "expr {{ ru_file }} : '^.*p\\([0-9]*\\)_.*$'"
+    register: patch_id
+
+  - name: Set Patch ID
+    ansible.builtin.set_fact:
+      patchid: "{{ patch_id.stdout }}"
+  when: apply_ru
+
+- name: Including prep_db_install.yml task
+  ansible.builtin.include_role:
+    name: ibm.power_aix_oracle.oracle_install_db
+    tasks_from: prep_db_install.yml
+  when: required_homes is defined
+
+- block:
+   - name: Copying Oracle RDBMS Install response file
+     ansible.builtin.template:
+      src: oracle19c_install.rsp.j2
+      dest: "{{ scripts_dir }}/oracle19c_install_{{ item.oh }}.rsp"
+      owner: "{{ ora_user }}"
+      group: "{{ ora_oinstall_group }}"
+      mode: '0644'
+     with_items:
+       - "{{ required_homes }}"
+
+   - name: Copying oracle_install.sh
+     ansible.builtin.template:
+      src: oracle_install.sh.j2
+      dest: "{{ scripts_dir }}/oracle_install_{{ item.oh }}.sh"
+      owner: "{{ ora_user }}"
+      group: "{{ ora_oinstall_group }}"
+      mode: '0755'
+     with_items:
+       - "{{ required_homes }}"
+
+   - name: Installing 19c RDBMS
+     ansible.builtin.command: "ksh93 {{ scripts_dir }}/oracle_install_{{ item.oh }}.sh"
+     register: oracle_install
+     with_items:
+       - "{{ required_homes }}"
+  when: required_homes is defined
+
+- name: Executing root.sh
+  ansible.builtin.shell: "{{ item.oracle_home }}/root.sh && touch {{ done_dir }}/{{ item.oh }}.rootdone"
+  register: execroot
+  with_items:
+    - "{{ db_homes_list }}"
+  when: rootdone.results | selectattr('item.oh', 'equalto', item.oh) | map(attribute='stat.exists') | list | first != true
+
+- block:
+   - name: Copying patch_install.sh
+     ansible.builtin.template:
+      src: apply_ru_db.sh.j2
+      dest: "{{ scripts_dir }}/apply_ru_db_{{ item.oh }}.sh"
+      owner: "{{ ora_user }}"
+      group: "{{ ora_oinstall_group }}"
+      mode: '0755'
+     with_items:
+       - "{{ db_homes_list }}"
+
+   - name: Running patch_install.sh
+     ansible.builtin.command: "ksh93 {{ scripts_dir }}/apply_ru_db_{{ item.oh }}.sh"
+     register: patch_install
+     with_items:
+       - "{{ db_homes_list }}"
+  when: 
+    - db_homes_list is defined
+    - apply_ru

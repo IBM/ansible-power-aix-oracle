@@ -1,0 +1,132 @@
+# Copyright (c) IBM Corporation 2021
+# This file is defining Oracle Variables needed for oracle single instance installation on PowerVC AIX VM
+
+# Below are the variables that are specific to PowerVC
+vm_name: "oravm"
+cimage_id: "9437d7e3-14de-4865-a13b-12479fa05909"
+vm_profile: "medium"
+vm_network: "Network192"
+orasw_vg_disk_size: 100
+data_disk_count: 3 
+data_disk_size: 20
+data_disk_prefix: "{{ vm_name }}_data"
+data_disks: "{%- for n in range(2, data_disk_count + 2, 1 ) -%} {%- if n == data_disk_count+1 -%} hdisk{{ n }} {%- else -%} hdisk{{ n }}, {%- endif -%} {%- endfor -%}"
+powervc_storage_template: "FS5000 base template"
+
+# Below are the variables that are needed for Oracle Deployment
+
+# Provide the ansible work directory on target system
+work_dir: /tmp/ansible
+
+# Oracle Version which is going to be installed. It should be mentioned as a 5 digit number, example: 19.3.0.0.0
+ora_version: 19c
+
+# Setting this to true will backup /etc/resolv.conf file and copies the file roles/preconfig/files/resolv.conf to /etc.
+# Make sure to update the nameserver details in roles/precofig/files/resolv.conf.
+# If set false no changes will be done to /etc/resolv.conf file
+modify_nameserv: false
+
+preconfig:
+  linux:
+    tools: ['unzip','bash','sudo']
+    optional_tools: []
+
+# Provide optional nfs details for filesets installation. The values are blank by default.
+nfsfilesetMountPoint:
+nfsfilesetExportDir:
+nfsfilesetServerIP:
+
+# If nim filesystem mounted on target host, specify use_std_nim to true. On PowerVS VMs, the standard path is /usr/sys/inst.images/installp/ppc
+use_std_nim: false
+powernim_local_path: '/usr/sys/inst.images/installp/ppc'
+
+# Specify os paging size in MB
+os_paging_size: 16384
+
+# Required OS Groups
+
+ora_oinstall_group: oinstall
+ora_oinstall_group_gid: 501
+ora_group: dba
+ora_group_gid: 500
+ora_oper_group: oper
+ora_oper_group_gid: 503
+ora_asmdba_group: asmdba
+ora_asmoper_group: asmoper
+ora_asmadmin_group: asmadmin
+ora_asmdba_group_gid: 504
+ora_asmoper_group_gid: 505
+ora_asmadmin_group_gid: 506
+
+# Grid s/w owner
+ora_grid_user: grid
+ora_grid_user_uid: 601
+
+# RDBMS s/w owner
+ora_user: oracle
+ora_user_uid: 600
+
+# Provide the mount point path where the Grid & Database s/w must be installed
+
+ora_sw_vg: orafsvg
+ora_sw_vg_disk:  ['hdisk1']
+ora_sw_fs: "/u01"
+ora_sw_fs_size: 99G
+
+# Provide the JFS path for the database files if ASM is NOT required. Make sure to set grid_asm_flag to false.
+
+ora_data_vg: oradatavg
+ora_data_vg_disk: ['hdisk11']
+ora_data_fs: /oradata
+ora_data_fs_size: 5G
+ora_db_fs_list:
+  - { fs_name: "/datafiles", size: "8G" }
+  - { fs_name: "/controlfiles", size: "2G" }
+  - { fs_name: "/redologs", size: "4G", bs: 512  }
+
+# Software staging: Binary staging location can be remote|local|nfs
+# remote : Ansible Controller location defined in oracledbaix19c & oraclegridaix19c
+# local: Local location of Target Hosts
+# nfs: Network File system location
+ora_binary_location: nfs
+
+# Set the below values if  "ora_binary_location=nfs"
+ora_nfs_host: 192.168.1.1
+ora_nfs_device: /repos
+ora_nfs_filesystem: /repos
+
+# Provide full path of the s/w as per the above "ora_binary_location" type.
+database_sw: /repos/images/oracle/19c/V982583-01_193000_db.zip
+grid_sw: /repos/images/oracle/19c/V982588-01_193000_grid.zip
+
+
+# To apply Release update (RU) patch, set apply_ru to True and provide the RU and latest OPatch paths. When using Gold Image, set this to False.
+apply_ru: True
+ru_file: /repos/images/oracle/19c/RU19.26/p37257886_190000_AIX64-5L_GI_RU19.26.zip
+opatch_file: /repos/images/oracle/opatch/12.2.0.1.44/p6880880_121010_AIX64-5L.zip
+
+# Provide the path for Oracle Base & Inventory directories.
+
+ora_base: "{{ora_sw_fs}}/base"
+ora_inventory: "{{ora_sw_fs}}/oraInventory"
+
+# Provide the path where the Grid Infrastructure for Standalone needs to be installed.
+grid_ora_home: "{{ ora_sw_fs }}/19c/grid/home"
+
+# Provide the path where the Release update (RU) patches should be extracted.
+ru_stage: "{{ora_sw_fs}}/RU19"
+
+# Installation Precheck true/false. When set to True, during the installation, all the precheck failures will be ignored.
+ignoreprecheck: false
+
+# Fill these parameters when the database must be created on ASM. When set to True, Grid Standalone will be installed and Diskgroup is created.
+
+grid_asm_flag: true
+asm_sys_password: oracle
+asm_diskgroup_name: DATA
+asm_diskgroup_redundancy: EXTERNAL
+asm_diskgroup_ausize: 4
+asm_diskgroup_disk: "{{ data_disks.split(',') }}" 
+asm_disk_loc_prefix: "/dev/r"
+asm_diskdiscoverystring: "{{asm_disk_loc_prefix}}hdisk*"
+asm_asmsnmp_password: oracle

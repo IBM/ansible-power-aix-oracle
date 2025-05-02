@@ -1,5 +1,5 @@
 - name: Show which inventory file we are working with.
-  debug:
+  ansible.builtin.debug:
     msg: Inventory file is {{ inventory_file }}
 
 - name: Check inventory file for host {{ vm_name }}
@@ -9,14 +9,14 @@
   failed_when: res_ip.rc > 2
 
 - name: Add VM to the inventory file
-  lineinfile:
+  ansible.builtin.lineinfile:
     path: "{{ inventory_file }}"
     line: "{{ vm_name }}  ansible_host={{ hostip }} ansible_ssh_common_args='-o StrictHostKeyChecking=no' ansible_user=root"
   when: res_ip.rc == 1
 
 - name: update known hosts
-  shell: "ssh-keyscan -H {{ hostip }} >> ~/.ssh/known_hosts"
+  ansible.builtin.shell: "ssh-keyscan -H {{ hostip }} >> ~/.ssh/known_hosts"
   when: res_ip.rc == 1
 
 - name: Refresh Inventory
-  meta: refresh_inventory
+  ansible.builtin.meta: refresh_inventory

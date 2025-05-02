@@ -1,0 +1,3 @@
+swapsize: 16384
+maxuserproc: 16384
+response_file: oracle19c_grid_install.rsp

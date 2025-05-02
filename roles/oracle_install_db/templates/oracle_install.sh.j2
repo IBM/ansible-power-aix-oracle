@@ -1,0 +1,30 @@
+#!/bin/bash
+# Copyright (c) IBM Corporation 2025
+
+su - {{ ora_user }} << EOF
+
+# Installation
+
+if [ ! -f {{ done_dir }}/oracle.install.{{ item.oh }}.done ] && [ {{ ignoreprecheck }} == True ]; then
+   export SKIP_ROOTPRE="TRUE" && {{ item.oracle_home }}/runInstaller -ignorePrereqFailure -silent -responsefile {{ scripts_dir }}/oracle19c_install_{{ item.oh }}.rsp > {{ logs_dir }}/oracle_install.{{ item.oh }}.out 2>&1
+   if grep -q 'Successfully Setup Software' {{ logs_dir }}/oracle_install.{{ item.oh }}.out; then
+      touch {{ done_dir }}/oracle.install.{{ item.oh }}.done
+      echo "INFO: Oracle install done"
+   else
+      echo "ERROR: runInstaller failed. Please check {{ logs_dir }}/oracle_install.{{ item.oh }}.out for details."
+      exit 1
+   fi
+fi
+
+if [ ! -f {{ done_dir }}/oracle.install.{{ item.oh }}.done ] && [ {{ ignoreprecheck }} == False ]; then
+   export SKIP_ROOTPRE="TRUE" && {{ item.oracle_home }}/runInstaller -silent -responsefile {{ scripts_dir }}/oracle19c_install_{{ item.oh }}.rsp > {{ logs_dir }}/oracle_install.{{ item.oh }}.out 2>&1
+   if grep -q 'Successfully Setup Software' {{ logs_dir }}/oracle_install.{{ item.oh }}.out; then
+      touch {{ done_dir }}/oracle.install.{{ item.oh }}.done
+      echo "INFO: Oracle install done"
+   else
+      echo "ERROR: runInstaller failed. Please check {{ logs_dir }}/oracle_install.{{ item.oh }}.out for details."
+      exit 1
+   fi
+fi
+
+exit 0 

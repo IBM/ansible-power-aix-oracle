@@ -1,15 +1,15 @@
 - name: Check AIX required {{item}} Fileset present or not
-  command: lslpp -l {{item}}
+  ansible.builtin.command: lslpp -l {{item}}
   register: fileset_output
   failed_when: fileset_output.rc not in [ 0, 1 ]
 
 - name: Display result
-  debug:
+  ansible.builtin.debug:
     var: fileset_output.stderr
   when: fileset_output.rc not in [ 0 ]
 
 - name: Install additional AIX {{item}}  filesets
-  command:
+  ansible.builtin.command:
     cmd:   "/usr/sbin/installp -acgXd . -Y {{ item }}"
     chdir: "{{ prenfsconfig.lpp_src.nfs_mount.0.0 }}
            {%- if prenfsconfig.lpp_src.subdir is defined and
@@ -26,7 +26,7 @@
 
 
 - name: Install additional AIX {{item}} filesets using std nim mount
-  command:
+  ansible.builtin.command:
     cmd:   "/usr/sbin/installp -acgXd . -Y {{ item }}"
     chdir: "{{ powernim_local_path }}"
   when: 

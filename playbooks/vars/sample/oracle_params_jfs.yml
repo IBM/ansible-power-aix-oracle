@@ -1,0 +1,97 @@
+# Copyright (c) IBM Corporation 2021
+# This file defines the variables needed for Oracle Database Single Installation with Database on JFS filesystem.
+# This is false by default
+grid_asm_flag: False
+# Provide the ansible work directory on target system.
+work_dir: /tmp/refactor
+
+# Oracle Version which is going to be installed. It should be mentioned as a 5 digit number, example: 19.3.0.0.0
+ora_version: 19c
+
+# Setting this to true will backup /etc/resolv.conf file and copies the file roles/preconfig/files/resolv.conf to /etc.
+# Make sure to update the nameserver details in roles/precofig/files/resolv.conf.
+# If set false no changes will be done to /etc/resolv.conf file
+modify_nameserv: false
+
+preconfig:
+  linux:
+    tools: ['unzip','bash','sudo']
+    optional_tools: []
+
+# Provide optional nfs details for filesets installation. The values are blank by default.
+nfsfilesetMountPoint:
+nfsfilesetExportDir:
+nfsfilesetServerIP:
+
+# If nim filesystem mounted on target host, specify use_std_nim to true. On PowerVS VMs, the standard path is /usr/sys/inst.images/installp/ppc
+use_std_nim: false
+powernim_local_path: '/usr/sys/inst.images/installp/ppc'
+
+# Specify os paging size in MB
+os_paging_size: 16384
+
+# Required OS Groups
+ora_oinstall_group: oinstall
+ora_oinstall_group_gid: 501
+ora_group: dba
+ora_group_gid: 500
+ora_oper_group: oper
+ora_oper_group_gid: 503
+
+# RDBMS s/w owner
+ora_user: oracle
+ora_user_uid: 600
+
+# Provide the mount point path where the Database s/w must be installed
+ora_sw_vg: orafsvg
+ora_sw_vg_disk:  ['hdisk1']
+ora_sw_fs: "/u01"
+ora_sw_fs_size: 99G
+
+# Provide the JFS path for the database files if ASM is NOT required. Make sure to set grid_asm_flag to false.
+ora_data_vg: oradatavg
+ora_data_vg_disk: ['hdisk2','hdisk3','hdisk4']
+ora_data_fs: /oradata
+ora_data_fs_size: 5G
+ora_db_fs_list:
+  - { fs_name: "/datafiles", size: "8G" }
+  - { fs_name: "/controlfiles", size: "2G" }
+  - { fs_name: "/redologs", size: "4G", bs: 512  }
+
+# Software staging: Binary staging location can be remote|local|nfs
+# remote : Ansible Controller location defined in oracledbaix19c & oraclegridaix19c
+# local: Local location of Target Hosts
+# nfs: Network File system location
+ora_binary_location: nfs
+
+# Set the below values if  "ora_binary_location=nfs"
+ora_nfs_host: 192.168.1.1
+ora_nfs_device: /staging
+ora_nfs_filesystem: /staging
+
+# Provide full path of the s/w as per the above "ora_binary_location" type.
+database_sw: /staging/db_home_2025-04-08_03-10-47AM.zip
+
+# To apply Release update (RU) patch, set apply_ru to True and provide the RU and latest OPatch paths.
+apply_ru: False
+ru_file: /repos/images/oracle/19c/RU19.25/p36916690_190000_AIX64-5L_GI_RU19.25.zip
+opatch_file: /repos/images/oracle/opatch/12.2.0.1.44/p6880880_121010_AIX64-5L.zip
+
+# Provide the path for Oracle Base & Inventory directories.
+ora_base: "{{ora_sw_fs}}/base"
+ora_inventory: "{{ora_sw_fs}}/oraInventory"
+
+# Provide the path where the Release update (RU) patches should be extracted.
+ru_stage: "{{ ora_sw_fs }}/19c"
+
+# Installation Precheck true/false. When set to True, during the installation, all the precheck failures will be ignored.
+ignoreprecheck: true
+
+# Provide the path where the Oracle RDBMS should be installed and the database details.
+databases:
+  - ora_home: "{{ora_sw_fs}}/19c/database/home"
+
+# Provide DB name, password & characterset
+ora_sid: orcl
+ora_pwd: passw0rd
+ora_character_set: WE8MSWIN1252
