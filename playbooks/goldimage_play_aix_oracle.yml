@@ -1,0 +1,8 @@
+---
+- name: Playbook
+  hosts: all
+  gather_facts: true
+  vars_files: vars/oracle_create_goldimage.yml
+  roles:
+    - role: oracle_create_gold_image
+      tags: oracle_create_gold_image

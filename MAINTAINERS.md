@@ -8,6 +8,7 @@ The maintainers are listed in alphabetical order of their Github username.
 * Sudhindra Kumasagi (@sudhisk)
 * Stephan Navarro  (@stephannavarro)
 * Shiva Laveti (@shivasl2022)
+* Naved Afroz (@nava-dba)
 
 
 Bhargavaram Akula - bhargaku@in.ibm.com
@@ -15,3 +16,5 @@ Bhargavaram Akula - bhargaku@in.ibm.com
 Sudhindra Kumasagi - sudhindra.kumasagi@ibm.com
 
 Shiva Laveti - shiva.laveti@ibm.com
+
+Naved Afroz - naved.afroz1@ibm.com

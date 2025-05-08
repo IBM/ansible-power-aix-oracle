@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Switch to oracle user and run the deinstall command in check-only mode
+su - {{ ora_grid_user }} <<EOF
+
+# Run the deinstall command in check-only mode
+{{ grid_ora_home }}/deinstall/deinstall -silent -checkonly >> {{ done_dir }}/grid_checkonly_deinstall.out 2>&1 &
+deinstall_pid=\$!
+
+# Wait for the deinstall command to finish
+wait \$deinstall_pid
+if [ \$? -ne 0 ]; then
+    echo "Error: Deinstall check-only command failed!" >> {{ done_dir }}/gi_deinstall_debug.log
+    exit 1
+fi
+
+# Extract the response file path
+if [ -f {{ done_dir }}/grid_checkonly_deinstall.out ]; then
+    response_file=\$(grep "Location of response file generated:" "{{ done_dir }}/grid_checkonly_deinstall.out" | sed -n "s/.*'\([^']*\)'.*/\1/p")
+    echo "\$response_file" >> {{ done_dir }}/gi_deinstall_debug.log
+else
+    echo "Error: Output file not found." >> {{ done_dir }}/gi_deinstall_debug.log
+    exit 1
+fi
+
+# Run the deinstall command with the response file
+{{ grid_ora_home }}/deinstall/deinstall -silent -paramfile  \$response_file >> {{ done_dir }}/grid_deinstall.out 2>&1
+
+# Check if deinstallation was successful
+if grep -q -i 'Oracle Restart is stopped and de-configured successfully.' "{{ done_dir }}/grid_deinstall.out"; then
+    touch "{{ done_dir }}/grid_deinstall.done"
+else
+    echo "Error: Deinstallation failed!" >> "{{ done_dir }}/gi_deinstall_debug.log"
+    exit 1
+fi
+
+EOF

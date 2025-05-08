@@ -1,0 +1,10 @@
+#!/bin/bash
+su - {{ ora_user }} <<EOF
+export SKIP_ROOTPRE="TRUE"
+{{ ora_home }}/runInstaller -silent -createGoldImage -destinationLocation {{ goldimage_destination }} >> {{ done_dir }}/db_gold_image.out 2>&1
+if grep -q -i 'Successfully Setup Software.' {{ done_dir }}/db_gold_image.out; then
+   touch {{ done_dir }}/db_gold_image.done
+else
+   exit 1
+fi
+EOF

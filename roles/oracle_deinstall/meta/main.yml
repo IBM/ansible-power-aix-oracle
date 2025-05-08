@@ -1,0 +1,18 @@
+---
+galaxy_info:
+  role_name: oracle_deinstall
+  author: Naved Afroz
+  description: Ansible role deinstall Oracle GI and Database 19c homes from AIX.
+  company: IBM
+
+  license: Apache-2.0
+
+  min_ansible_version: 2.9
+
+  platforms:
+  - name: AIX
+    versions:
+    - all
+
+  galaxy_tags: [aix]
+  dependencies: []
