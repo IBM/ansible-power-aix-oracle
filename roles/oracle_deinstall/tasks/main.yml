@@ -130,8 +130,8 @@
       ansible.builtin.file:
         path: "{{ done_dir }}/grid_rootdeinstall.done"
         state: touch
-        owner: {{ ora_user }}
-        group: {{ ora_oinstall_group }}
+        owner: "{{ ora_user }}"
+        group: "{{ ora_oinstall_group }}"
         mode: '0644'
       when:
         - rootdeinstall_output_stat.stat.exists

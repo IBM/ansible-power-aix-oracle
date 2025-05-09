@@ -1,10 +1,10 @@
 # Ansible Role: oracle_install 
- This role creates PowerVC VM for oracle Single Instance installation 
+ This role performs oracle single instance grid home installation
 ## Requirements
 None.
 
 ## Role Variables
-Variables are defined at playbooks/vars/powervc_oracle_params.yml  
+Variables are defined at playbooks/vars/oracle_params.yml  
 ## Dependencies
 preconfig 
 
@@ -12,7 +12,7 @@ preconfig
 
     - hosts: aix
       include_role:
-        name: powervc_create_aixvm 
+        name: oracle_install_gi 
 
 ## Copyright
 © Copyright IBM Corporation 2020

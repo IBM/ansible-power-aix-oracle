@@ -1,5 +1,5 @@
 # Ansible Role: oracle_install 
- This role performs oracle single instance database  installation
+ This role performs oracle single instance database home installation
 ## Requirements
 None.
 
@@ -12,7 +12,7 @@ preconfig
 
     - hosts: aix
       include_role:
-        name: oracle_install 
+        name: oracle_install_db 
 
 ## Copyright
 © Copyright IBM Corporation 2020

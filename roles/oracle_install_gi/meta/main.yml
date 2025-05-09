@@ -1,8 +1,8 @@
 ---
 galaxy_info:
-  role_name: oracle_install_db 
+  role_name: oracle_install_gi 
   author: Bhargavaram Akula 
-  description: Ansible role performs Oracle 19c Database Home installation on AIX.
+  description: Ansible role performs Oracle 19c Single Grid Home installation on AIX.
   company: IBM
 
   license: Apache-2.0
