@@ -5,7 +5,7 @@ grid_asm_flag: False
 # Provide the ansible work directory on target system.
 work_dir: /tmp/ansible
 
-# Oracle Version which is going to be installed. It should be mentioned as a 5 digit number, example: 19.3.0.0.0
+# Oracle Version which is going to be installed. Example: 19c
 ora_version: 19c
 
 # Setting this to true will backup /etc/resolv.conf file and copies the file roles/preconfig/files/resolv.conf to /etc.
