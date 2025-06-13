@@ -67,7 +67,7 @@ ora_nfs_host: 192.168.1.1
 ora_nfs_device: /repos
 ora_nfs_filesystem: /repos
 
-# Provide full path of the s/w as per the above "ora_binary_location" type.
+# Provide full path of the s/w as per the above "ora_binary_location" type. The binaries can be of Oracle 19.3 (base version) or Gold Images (19.X).
 database_sw: /repos/images/goldimages/db_home_2024-11-08_00-38-17AM.zip
 grid_sw: /repos/images/goldimages/grid_home_2024-11-07_11-24-15PM.zip
 # To apply Release update (RU) patch, set apply_ru to True and provide the RU and latest OPatch paths. When using Gold Image, set this to False.
