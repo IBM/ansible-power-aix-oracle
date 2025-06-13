@@ -1,0 +1,22 @@
+# Create/Drop database variables section
+oracle_user: oracle             # Provide the username who owns the Oracle Installations.
+oracle_group: oinstall    # Primary group for oracle_user.
+oracle_stage: /tmp/orcl  # Provide path on the target AIX lpar to stage response files.
+oracle_base: /u01/base
+oracle_dbf_dir_asm: +DATA                 # Provide path on the Lpar to store datafiles.
+
+
+# This is an example layout to create a database.
+oracle_databases:                                     # Dictionary describing the databases to be installed.
+      - home:                                     # 'Last' directory in ORACLE_HOME path (e.g /u01/app/oracle/db1)
+        oracle_version_db: 19c                  # Oracle version. Ex:For 12cR1 - 12.1.0.2, 19c
+        oracle_home: /u01/product/19c/database              # Oracle Home path.
+        oracle_db_name: orcl                         # Provide Database name.
+        oracle_db_type: SI                           # Type of database (RAC,RACONENODE,SI)
+        is_container: True                            # (true/false) Is the database a container database
+        pdb_prefix: orclpdb                            # Provide Pluggable database name.
+        num_pdbs: 1                                   # Number of pluggable databases.
+        storage_type: ASM                              # Database storage to be used. ASM or FS. ASM mandatory for RAC DB type.
+        state: present
+        redolog_size_in_mb: 40
+        oracle_init_params: "db_create_online_log_dest_1=+REDO"

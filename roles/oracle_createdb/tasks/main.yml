@@ -11,15 +11,6 @@
   register: db_check
   failed_when: db_check.rc > 2
 
-- name: Changing permission to {{ora_base}}/admin
-  ansible.builtin.file:
-    path: "{{ ora_base }}/admin"
-    state: directory
-    recurse: yes
-    owner: "{{ ora_user }}"
-    group: "{{ ora_oinstall_group }}"
-    mode: '0775'
-
 - name: DB Check
   ansible.builtin.fail:
     msg: "DB {{ora_sid}} is already created"

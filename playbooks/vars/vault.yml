@@ -1,0 +1,6 @@
+default_gipass: Oracle4u             # ASM sys user password.
+default_dbpass: Oracle4u             # Sys user password.
+
+asm_password: Oracle4u               # ASM sys user password for Single Instance GI Upgrade.
+mos_login:                           # My Oracle Support Username.
+mos_password:                        # My Oracle Support Password.

@@ -3,7 +3,7 @@
 # This is false by default
 grid_asm_flag: False
 # Provide the ansible work directory on target system.
-work_dir: /tmp/refactor
+work_dir: /tmp/ansible
 
 # Oracle Version which is going to be installed. It should be mentioned as a 5 digit number, example: 19.3.0.0.0
 ora_version: 19c

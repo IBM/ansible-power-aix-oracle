@@ -15,13 +15,11 @@
   ansible.builtin.stat:
     path: "{{ done_dir }}/giopunzip.done"
   register: op_unzipped
-  when: apply_ru
 
 - name: Checking if RU is extracted
   ansible.builtin.stat:
     path: "{{ done_dir }}/ruunzip.done"
   register: ru_unzipped
-  when: apply_ru
 
 - name: Creating RU Stage Directory
   ansible.builtin.file:
@@ -56,7 +54,6 @@
      ansible.builtin.command: touch "{{ done_dir }}/ruunzip.done"
   when:
     - ora_binary_location in ['local','nfs']
-    - ru_unzipped is defined
     - not ru_unzipped.stat.exists
     - apply_ru
 
@@ -75,7 +72,7 @@
      ansible.builtin.shell: rm -rf {{ files_dir }}/{{ ru_file | basename }}
   when:
     - ora_binary_location == 'remote'
-    - (ru_unzipped is defined or not ru_unzipped.stat.exists)
+    - not ru_unzipped.stat.exists
     - apply_ru
 
 - block:

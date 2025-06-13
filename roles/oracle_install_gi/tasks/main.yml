@@ -101,6 +101,14 @@
   register: postinstall
   tags: poststep
 
+- name: Changing permission of {{ ora_base }}/admin
+  ansible.builtin.file:
+    path: "{{ ora_base }}/admin"
+    state: directory
+    owner: "{{ ora_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0775'
+
 - name: Post Grid Installation | Status of the Services
   ansible.builtin.shell: "export ORACLE_HOME={{ grid_ora_home }} && {{ grid_ora_home }}/bin/crsctl stat res -t"
   register: check_services

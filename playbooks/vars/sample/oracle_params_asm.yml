@@ -2,7 +2,7 @@
 # This file defines the variables needed for Oracle Database Single Installation
 
 # Provide the ansible work directory on target system. 
-work_dir: /tmp/si_refactor
+work_dir: /tmp/ansible
 
 # Oracle Version which is going to be installed. It should be mentioned as a 5 digit number, example: 19.3.0.0.0
 ora_version: 19c

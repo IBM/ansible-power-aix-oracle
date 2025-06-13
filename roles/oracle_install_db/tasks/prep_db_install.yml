@@ -47,6 +47,14 @@
     ansible.builtin.shell: rm -rf {{ files_dir }}/{{ database_sw | basename }}
   when: ora_binary_location == 'remote'
 
+- name: Get Patch ID
+  ansible.builtin.shell: "expr {{ ru_file }} : '^.*p\\([0-9]*\\)_.*$'"
+  register: patch_id
+
+- name: Set Patch ID
+  ansible.builtin.set_fact:
+    patchid: "{{ patch_id.stdout }}"
+
 - name: Checking if RU is extracted
   ansible.builtin.stat:
     path: "{{ done_dir }}/{{ patchid }}.ruunzip.done"

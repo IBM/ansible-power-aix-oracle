@@ -1,10 +1,7 @@
-# Copyright (c) IBM Corporation 2021
-# This file defines the variables needed for Oracle Database Single Installation
+# Provide the ansible work directory on target system.
+work_dir: /tmp/ansible
 
-# Provide the ansible work directory on target system. 
-work_dir: /tmp/si_refactor
-
-# Oracle Version which is going to be installed. 19c is the allowed value for this parameter.
+# Oracle Version which is going to be installed. It should be mentioned as a 5 digit number, example: 19.3.0.0.0
 ora_version: 19c
 
 # Setting this to true will backup /etc/resolv.conf file and copies the file roles/preconfig/files/resolv.conf to /etc.
@@ -14,7 +11,7 @@ modify_nameserv: false
 
 preconfig:
   linux:
-    tools: ['unzip','bash','sudo']
+    tools: ['unzip','bash']
     optional_tools: []
 
 # Provide optional nfs details for filesets installation. The values are blank by default.
@@ -44,7 +41,7 @@ ora_asmdba_group_gid: 504
 ora_asmoper_group_gid: 505
 ora_asmadmin_group_gid: 506
 
-# Grid s/w owner 
+# Grid s/w owner
 ora_grid_user: grid
 ora_grid_user_uid: 601
 
@@ -63,20 +60,18 @@ ora_sw_fs_size: 99G
 # remote : Ansible Controller location defined in oracledbaix19c & oraclegridaix19c
 # local: Local location of Target Hosts
 # nfs: Network File system location
-ora_binary_location: remote
+ora_binary_location: nfs
 
 # Set the below values if  "ora_binary_location=nfs"
 ora_nfs_host: 192.168.1.1
 ora_nfs_device: /repos
 ora_nfs_filesystem: /repos
 
-# Provide full path of the s/w as per the above "ora_binary_location" type. 
-#database_sw: /staging/db_home_2025-04-08_03-10-47AM.zip
-database_sw: /repos/images/oracle/19c/V982583-01_193000_db.zip
-#grid_sw: /staging/grid_home_2025-04-08_02-48-49AM.zip 
-grid_sw: /repos/images/oracle/19c/V982588-01_193000_grid.zip
+# Provide full path of the s/w as per the above "ora_binary_location" type.
+database_sw: /repos/images/goldimages/db_home_2024-11-08_00-38-17AM.zip
+grid_sw: /repos/images/goldimages/grid_home_2024-11-07_11-24-15PM.zip
 # To apply Release update (RU) patch, set apply_ru to True and provide the RU and latest OPatch paths. When using Gold Image, set this to False.
-apply_ru: True
+apply_ru: False
 ru_file: /repos/images/oracle/19c/RU19.26/p37257886_190000_AIX64-5L_GI_RU19.26.zip
 opatch_file: /repos/images/oracle/opatch/12.2.0.1.44/p6880880_121010_AIX64-5L.zip
 
@@ -106,11 +101,10 @@ asm_diskdiscoverystring: "{{asm_disk_loc_prefix}}hdisk*"
 asm_asmsnmp_password: passw0rd
 
 # Provide the path where the Oracle RDBMS should be installed and the database details.
-databases: 
+databases:
   - ora_home: "{{ora_sw_fs}}/19c/database/home"
-  - ora_home: "{{ora_sw_fs}}/19c/database/home.2"  
 
-# Provide DB name, password & characterset    
+# Provide DB name, password & characterset
 ora_sid: orcl
 ora_pwd: passw0rd
 ora_character_set: WE8MSWIN1252
