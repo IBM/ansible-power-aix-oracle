@@ -3,9 +3,9 @@
 # This is false by default
 grid_asm_flag: False
 # Provide the ansible work directory on target system.
-work_dir: /tmp/refactor
+work_dir: /tmp/ansible
 
-# Oracle Version which is going to be installed. It should be mentioned as a 5 digit number, example: 19.3.0.0.0
+# Oracle Version which is going to be installed. Supported value: 19c
 ora_version: 19c
 
 # Setting this to true will backup /etc/resolv.conf file and copies the file roles/preconfig/files/resolv.conf to /etc.
@@ -15,7 +15,7 @@ modify_nameserv: false
 
 preconfig:
   linux:
-    tools: ['unzip','bash','sudo']
+    tools: ['unzip','bash']
     optional_tools: []
 
 # Provide optional nfs details for filesets installation. The values are blank by default.
@@ -69,7 +69,7 @@ ora_nfs_host: 192.168.1.1
 ora_nfs_device: /staging
 ora_nfs_filesystem: /staging
 
-# Provide full path of the s/w as per the above "ora_binary_location" type.
+# Provide full path of the s/w as per the above "ora_binary_location" type. The binaries can be of Oracle 19.3 (base version) or Gold Images (19.X).
 database_sw: /staging/db_home_2025-04-08_03-10-47AM.zip
 
 # To apply Release update (RU) patch, set apply_ru to True and provide the RU and latest OPatch paths.

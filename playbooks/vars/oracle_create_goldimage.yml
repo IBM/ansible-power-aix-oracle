@@ -7,12 +7,12 @@ work_dir:   &work_dir "/tmp/ansible"
 ora_user: oracle
 ora_oinstall_group: oinstall
 ora_inventory: /u01/oraInventory
-ora_home: /u01/product/19c/database
+ora_home: /u01/19c/database/home
 
 # Fill When DB lies on ASM
 
 grid_asm_flag: true
-grid_ora_home: /u01/grid/home
+grid_ora_home: /u01/19c/grid/home
 
 # Grid reponsefile parameter
 ora_grid_user: grid

@@ -1,0 +1,15 @@
+---
+- name: Provision pluggable database
+  hosts: hostname
+  gather_facts: yes
+  vars_files: 
+     - vars/podba_create_oracle_db_vars.yml
+     - vars/vault.yml
+  tasks:
+   - name: Include Oracle Create DB Role as oracle user
+     ansible.builtin.import_role:
+     name: ibm.power_aix_oracle_dba.oradb_create
+     become: true
+     become_user: "{{ oracle_user }}"
+     become_method: su
+     tags: oracle_createdb
