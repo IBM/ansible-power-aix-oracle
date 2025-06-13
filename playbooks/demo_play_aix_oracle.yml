@@ -2,7 +2,7 @@
 - name: Playbook
   hosts: host118
   gather_facts: yes 
-  vars_files: vars/oracle_params_asm_aprf_GoI.yml
+  vars_files: vars/oracle_params.yml
   roles:
     - role: preconfig
       tags: preconfig 
