@@ -1,7 +1,7 @@
 # Provide the ansible work directory on target system.
 work_dir: /tmp/ansible
 
-# Oracle Version which is going to be installed. Example: 19c
+# Oracle Version which is going to be installed. Supported value: 19c
 ora_version: 19c
 
 # Setting this to true will backup /etc/resolv.conf file and copies the file roles/preconfig/files/resolv.conf to /etc.
