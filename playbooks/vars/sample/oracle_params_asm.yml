@@ -14,7 +14,7 @@ modify_nameserv: false
 
 preconfig:
   linux:
-    tools: ['unzip','bash','sudo']
+    tools: ['unzip','bash']
     optional_tools: []
 
 # Provide optional nfs details for filesets installation. The values are blank by default.
@@ -70,10 +70,8 @@ ora_nfs_host: 192.168.1.1
 ora_nfs_device: /repos
 ora_nfs_filesystem: /repos
 
-# Provide full path of the s/w as per the above "ora_binary_location" type. 
-#database_sw: /staging/db_home_2025-04-08_03-10-47AM.zip
+# Provide full path of the s/w as per the above "ora_binary_location" type. The binaries can be of Oracle 19.3 (base version) or Gold Images.
 database_sw: /repos/images/oracle/19c/V982583-01_193000_db.zip
-#grid_sw: /staging/grid_home_2025-04-08_02-48-49AM.zip 
 grid_sw: /repos/images/oracle/19c/V982588-01_193000_grid.zip
 # To apply Release update (RU) patch, set apply_ru to True and provide the RU and latest OPatch paths. When using Gold Image, set this to False.
 apply_ru: True
