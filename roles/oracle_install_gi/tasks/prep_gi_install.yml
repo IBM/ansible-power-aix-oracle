@@ -59,7 +59,7 @@
 
 - block:
    - name: Copy RU files from remote
-     ansible.builtin.shell: scp {{ ru_file }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
+     ansible.builtin.shell: scp -o StrictHostKeyChecking=no {{ ru_file }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
      delegate_to: localhost
    - name: Extracting RU files
      ansible.builtin.shell: "unzip -o {{ files_dir }}/{{ ru_file | basename }} -d {{ ru_stage }} && chmod -R 775 {{ ru_stage }}"
@@ -89,7 +89,7 @@
 
 - block:
    - name: Copy GI sw files from remote
-     ansible.builtin.shell: scp {{ grid_sw }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
+     ansible.builtin.shell: scp -o StrictHostKeyChecking=no {{ grid_sw }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
      delegate_to: localhost
    - name: Extracting GI sw files
      ansible.builtin.shell: "unzip -o {{ files_dir }}/{{ grid_sw | basename }} -d {{ grid_ora_home }}"
@@ -110,7 +110,7 @@
      register: opb
      failed_when: opb.rc not in [0,1,2,3]
    - name: Copy OPatch from remote
-     ansible.builtin.shell: scp {{ opatch_file }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
+     ansible.builtin.shell: scp -o StrictHostKeyChecking=no {{ opatch_file }} {{ ansible_ssh_user }}@{{ targethost }}:{{ files_dir }}
      delegate_to: localhost
    - name: Extracting OPatch to {{ grid_ora_home }}
      ansible.builtin.shell: "unzip -o {{ files_dir }}/{{ opatch_file | basename }} -d {{ grid_ora_home }}"
