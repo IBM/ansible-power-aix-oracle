@@ -105,7 +105,7 @@
   ansible.builtin.file:
     path: "{{ ora_base }}/admin"
     state: directory
-    owner: "{{ ora_user }}"
+    owner: "{{ ora_grid_user }}"
     group: "{{ ora_oinstall_group }}"
     mode: '0775'
 
