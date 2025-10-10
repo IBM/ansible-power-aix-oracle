@@ -8,7 +8,7 @@
   tasks:
    - name: Include Oracle Create DB Role as oracle user
      ansible.builtin.import_role:
-     name: ibm.power_aix_oracle_dba.oradb_create
+       name: ibm.power_aix_oracle_dba.oradb_create
      become: true
      become_user: "{{ oracle_user }}"
      become_method: su

@@ -51,6 +51,14 @@
     state: directory
     mode: '0775'
 
+- name: Templating out Grid Response File
+  ansible.builtin.template:
+    src: oracle19c_grid_install.rsp
+    dest: "{{ files_dir }}/{{ response_file }}"
+    owner: "{{ ora_grid_user }}"
+    group: "{{ ora_oinstall_group }}"
+    mode: '0644'
+
 - name: Include prep_gi_install.yml task
   ansible.builtin.include_tasks: prep_gi_install.yml
 

@@ -61,18 +61,10 @@
   - name: Set Patch ID
     ansible.builtin.set_fact:
       patchid: "{{ patch_id.stdout }}"
-  when: apply_ru
+  when: apply_ru and ru_file!= None
 
 - name: Executing rootpre.sh
   ansible.builtin.shell: "{{ grid_ora_home }}/clone/rootpre.sh"
-
-- name: Templating out Grid Response File
-  ansible.builtin.template:
-    src: oracle19c_grid_install.rsp
-    dest: "{{ files_dir }}/{{ response_file }}"
-    owner: "{{ ora_grid_user }}"
-    group: "{{ ora_oinstall_group }}"
-    mode: '0644'
 
 - name: Templating out grid_install.sh Script
   ansible.builtin.template:

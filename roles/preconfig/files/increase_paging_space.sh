@@ -21,7 +21,7 @@ paging_space_size=`lsps -s | tail -1 | awk '{print $1}' | sed -e '/MB/s///'`
 
 if (( $paging_space_size < $final_size )) ; then
   page_lv=`lsvg -l rootvg | fgrep paging | awk '{print $1}'`
-
+  chlv -x 1024 hd6    # default vaue is 512 increasing to 1024 when another disk is added to rootvg
   # Find the physical partition size for allocating paging space(MB's)
   ppsize=`/usr/sbin/lsvg rootvg |grep 'PP SIZE' |awk '{print $6}'`
 
