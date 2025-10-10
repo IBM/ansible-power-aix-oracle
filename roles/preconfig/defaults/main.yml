@@ -10,7 +10,7 @@ done_dir: "{{ work_dir }}/done"
 files_dir: "{{ work_dir }}/files"
 backup_dir: "{{ work_dir }}/backup"
 
-preconfig:
+prenfsconfig:
  lpp_src:
     # !!! update !!!
     nfs_mount: [

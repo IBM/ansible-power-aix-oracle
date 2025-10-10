@@ -9,7 +9,7 @@ if [ ! -f "{{ done_dir }}/grid.patch.done" ] && [ -f "{{ done_dir }}/grid.instal
         touch "{{ done_dir }}/grid.patch.done"
         echo "RU Patch {{ patchid }} applied successfully"
     else
-        echo "ERROR: Failed to apply $ruid. See $patch_log for details."
+        echo "ERROR: Failed to apply {{ patchid }}. See {{ logs_dir }}/grid_patch.out for details."
         exit 1
     fi
 fi

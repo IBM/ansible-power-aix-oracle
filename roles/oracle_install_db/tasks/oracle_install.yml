@@ -69,7 +69,7 @@
   - name: Set Patch ID
     ansible.builtin.set_fact:
       patchid: "{{ patch_id.stdout }}"
-  when: apply_ru
+  when: apply_ru and ru_file != None
 
 - name: Including prep_db_install.yml task
   ansible.builtin.include_role:

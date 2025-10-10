@@ -6,7 +6,7 @@
   ansible.builtin.include_tasks: init.yml
 
 - name: Check current /var size
-  ansible.builtin.raw: df -m /var | awk '$0 !~ /Filesystem/ {printf "%d", $2}'
+  ansible.builtin.raw: df -m /var | awk '$0 !~ /Filesystem/ {printf "%d", $3}'
   register: var_fs_size_out
 
 # rootvg partition size is 250M, /var size must be multiple of 250M
@@ -15,10 +15,10 @@
     filesystem: /var
     state: present
     attributes: size=+500M
-  when: var_fs_size_out.stdout < '500'
+  when: var_fs_size_out.stdout | int < 500
 
 - name: Check current /opt size
-  ansible.builtin.raw: df -m /opt | awk '$0 !~ /Filesystem/ {printf "%d", $2}'
+  ansible.builtin.raw: df -m /opt | awk '$0 !~ /Filesystem/ {printf "%d", $3}'
   register: opt_fs_size_out
 
 # rootvg partition size is 250M, /opt size must be multiple of 250M
@@ -27,7 +27,7 @@
     filesystem: /opt
     state: present
     attributes: size=+750M
-  when: opt_fs_size_out.stdout < '750'
+  when: opt_fs_size_out.stdout | int < 750
 
 - name: Running cfgmgr to discover new devices
   ansible.builtin.shell: cfgmgr
