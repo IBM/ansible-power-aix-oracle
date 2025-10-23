@@ -1,0 +1,32 @@
+---
+- name: Provision pluggable database
+  hosts: hostname
+  gather_facts: true
+  vars_files:
+    - vars/podba_create_oracle_db_vars.yml
+    - vars/vault.yml
+    - vars/oracle_params.yml
+
+  roles:
+    - role: preconfig
+      tags: preconfig
+    - role: oracle_install_gi
+      tags: oracle_install_gi
+    - role: oracle_install_db
+      tags: oracle_install_db
+
+  tasks:
+    - name: Include Oracle Create Disk Group for standard configuration
+      ansible.builtin.import_role:
+        name: ibm.power_aix_oracle_dba.podba_create_asm_dg
+      become: true
+      become_user: "{{ oracle_user }}"
+      become_method: ansible.builtin.su
+
+    - name: Include Oracle Create DB Role as oracle user
+      ansible.builtin.import_role:
+        name: ibm.power_aix_oracle_dba.oradb_create
+      become: true
+      become_user: "{{ oracle_user }}"
+      become_method: ansible.builtin.su
+      tags: oracle_createdb

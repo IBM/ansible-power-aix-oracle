@@ -1,0 +1,166 @@
+#oracle install
+# Provide the ansible work directory on target system.
+work_dir: /tmp/ansible
+
+# Oracle Version which is going to be installed. Supported value: 19c
+ora_version: 19c
+
+# Setting this to true will backup /etc/resolv.conf file and copies the file roles/preconfig/files/resolv.conf to /etc.
+# Make sure to update the nameserver details in roles/precofig/files/resolv.conf.
+# If set false no changes will be done to /etc/resolv.conf file
+modify_nameserv: false
+
+preconfig:
+  linux:
+    tools: ['unzip','bash']
+    optional_tools: []
+
+# Provide optional nfs details for filesets installation. The values are blank by default.
+nfsfilesetMountPoint:
+nfsfilesetExportDir:
+nfsfilesetServerIP:
+
+# If nim filesystem mounted on target host, specify use_std_nim to true. On PowerVS VMs, the standard path is /usr/sys/inst.images/installp/ppc
+use_std_nim: false
+powernim_local_path: '/usr/sys/inst.images/installp/ppc'
+
+# Specify os paging size in MB
+os_paging_size: 16384
+
+# Required OS Groups
+
+ora_oinstall_group: oinstall
+ora_oinstall_group_gid: 501
+ora_group: dba
+ora_group_gid: 500
+ora_oper_group: oper
+ora_oper_group_gid: 503
+ora_asmdba_group: asmdba
+ora_asmoper_group: asmoper
+ora_asmadmin_group: asmadmin
+ora_asmdba_group_gid: 504
+ora_asmoper_group_gid: 505
+ora_asmadmin_group_gid: 506
+
+# Grid s/w owner
+ora_grid_user: grid
+ora_grid_user_uid: 601
+
+# RDBMS s/w owner
+ora_user: oracle
+ora_user_uid: 600
+
+# Provide the mount point path where the Grid & Database s/w must be installed
+
+ora_sw_vg: orafsvg
+ora_sw_vg_disk:  ['hdisk1']
+ora_sw_fs: "/u01"
+ora_sw_fs_size: 99G
+
+# Software staging: Binary staging location can be remote|local|nfs
+# remote : Ansible Controller location defined in oracledbaix19c & oraclegridaix19c
+# local: Local location of Target Hosts
+# nfs: Network File system location
+ora_binary_location: nfs
+
+# Set the below values if  "ora_binary_location=nfs"
+ora_nfs_host: 129.40.76.1
+ora_nfs_device: /repos
+ora_nfs_filesystem: /repos
+
+# Provide full path of the s/w as per the above "ora_binary_location" type. The binaries can be of Oracle 19.3 (base version) or Gold Images (19.X).
+database_sw: /repos/images/oracle/19c/V982583-01_193000_db.zip
+grid_sw: /repos/images/oracle/19c/V982588-01_193000_grid.zip
+# To apply Release update (RU) patch, set apply_ru to True and provide the RU and latest OPatch paths. When using Gold Image, set this to False.
+apply_ru: True
+ru_file: /repos/images/oracle/19c/RU19.28/RU19.28_p37957391_190000_AIX64-5L.zip
+opatch_file: /repos/images/oracle/opatch/12.2.0.1.46/p6880880_190000_AIX64-5L.zip
+
+# Provide the path for Oracle Base & Inventory directories.
+
+ora_base: "{{ora_sw_fs}}/base"
+ora_inventory: "{{ora_sw_fs}}/oraInventory"
+
+# Provide the path where the Grid Infrastructure for Standalone needs to be installed.
+grid_ora_home: "{{ ora_sw_fs }}/19c/grid/home"
+
+# Provide the path where the Release update (RU) patches should be extracted.
+ru_stage: "{{ora_sw_fs}}/RU19"
+
+# Installation Precheck true/false. When set to True, during the installation, all the precheck failures will be ignored.
+ignoreprecheck: false
+
+# Fill these parameters when the database must be created on ASM. When set to True, Grid Standalone will be installed and Diskgroup is created.
+grid_asm_flag: true
+asm_sys_password: oracle
+asm_diskgroup_name: CRSDG
+asm_diskgroup_redundancy: EXTERNAL
+asm_diskgroup_ausize: 4
+asm_diskgroup_disk: ['hdisk2']
+asm_disk_loc_prefix: "/dev/r"
+asm_diskdiscoverystring: "{{asm_disk_loc_prefix}}hdisk*"
+asm_asmsnmp_password: passw0rd
+
+# Provide the path where the Oracle RDBMS should be installed and the database details.
+databases:
+  - ora_home: "{{ora_sw_fs}}/19c/database/dbhome_1"
+
+# Provide DB name, password & characterset
+ora_sid: orcl
+ora_pwd: passw0rd
+ora_character_set: WE8MSWIN1252
+
+
+#diskgroup
+
+grid_install_user: oracle                       # Grid software owner.
+oracle_home_gi: /ora/grid               # Grid Home Location.
+oracle_rsp_stage: /tmp                          # Any accessible location on remote host to stage scripts.
+oracle_group: oinstall                          # Grid owner's primary user group.
+oracle_asm_disk_string: "/dev/r"                 # Entry point of the raw disk. Example "/dev".
+asm_diskgroups:
+  - diskgroup: DATA                         # Desired dikgroup name to be created.
+    properties:
+      - {redundancy: external, ausize: 1 }      # Redundancy: External, Normal, Ausize 1MB is default.
+    attributes:
+      - {name: 'compatible.rdbms', value: 19.0.0.0}
+      - {name: 'compatible.asm', value: 19.0.0.0}
+    disk:
+      - {device: hdisk3}                       # Provide raw disk name 1 on which the diskgroup needs to be created.
+
+  - diskgroup: REDO                         # Desired dikgroup name to be created.
+    properties:
+      - {redundancy: external, ausize: 1 }      # Redundancy: External, Normal, Ausize 1MB is default.
+    attributes:
+      - {name: 'compatible.rdbms', value: 19.0.0.0}
+      - {name: 'compatible.asm', value: 19.0.0.0}
+    disk:
+      - {device: hdisk16}                       # Provide raw disk name 1 on which the diskgroup needs to be created.
+      - {device: hdisk17}                       # Provide raw disk name 1 on which the diskgroup needs to be created.
+
+
+#db create
+
+
+# Create/Drop database variables section
+oracle_user: oracle             # Provide the username who owns the Oracle Installations.
+#oracle_group: oinstall    # Primary group for oracle_user.
+oracle_stage: /tmp/orcl  # Provide path on the target AIX lpar to stage response files.
+oracle_base: /u01/base
+oracle_dbf_dir_asm: +DATA                 # Provide path on the Lpar to store datafiles.
+
+
+# This is an example layout to create a database.
+oracle_databases:                                     # Dictionary describing the databases to be installed.
+      - home:                                     # 'Last' directory in ORACLE_HOME path (e.g /u01/app/oracle/db1)
+        oracle_version_db: 19c                  # Oracle version. Ex:For 12cR1 - 12.1.0.2, 19c
+        oracle_home: "{{ora_sw_fs}}/19c/database/dbhome_1"            # Oracle Home path.
+        oracle_db_name: orcl                         # Provide Database name.
+        oracle_db_type: SI                           # Type of database (RAC,RACONENODE,SI)
+        is_container: True                            # (true/false) Is the database a container database
+        pdb_prefix: orclpdb                            # Provide Pluggable database name.
+        num_pdbs: 1                                   # Number of pluggable databases.
+        storage_type: ASM                              # Database storage to be used. ASM or FS. ASM mandatory for RAC DB type.
+        state: present
+        redolog_size_in_mb: 40
+        oracle_init_params: "db_create_online_log_dest_1=+REDO"
