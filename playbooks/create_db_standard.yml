@@ -1,6 +1,6 @@
 ---
 - name: Provision pluggable database
-  hosts: hostname
+  hosts: all
   gather_facts: true
   vars_files:
     - vars/podba_create_oracle_db_vars.yml
