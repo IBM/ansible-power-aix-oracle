@@ -113,24 +113,25 @@ ora_character_set: WE8MSWIN1252
 
 #diskgroup
 
-grid_install_user: oracle                       # Grid software owner.
-oracle_home_gi: /ora/grid               # Grid Home Location.
+
+grid_install_user: {{ ora_grid_user }}                       # Grid software owner.
+oracle_home_gi: {{ grid_ora_home }}               # Grid Home Location.
 oracle_rsp_stage: /tmp                          # Any accessible location on remote host to stage scripts.
 oracle_group: oinstall                          # Grid owner's primary user group.
 oracle_asm_disk_string: "/dev/r"                 # Entry point of the raw disk. Example "/dev".
 asm_diskgroups:
   - diskgroup: DATA                         # Desired dikgroup name to be created.
     properties:
-      - {redundancy: external, ausize: 1 }      # Redundancy: External, Normal, Ausize 1MB is default.
+      - {redundancy: external, ausize: 4 }      # Redundancy: External, Normal, Ausize 4MB is default.
     attributes:
       - {name: 'compatible.rdbms', value: 19.0.0.0}
       - {name: 'compatible.asm', value: 19.0.0.0}
     disk:
-      - {device: hdisk3}                       # Provide raw disk name 1 on which the diskgroup needs to be created.
+      - {device: hdisk3}                       # Update dynamically for da Provide raw disk name 1 on which the diskgroup needs to be created.
 
   - diskgroup: REDO                         # Desired dikgroup name to be created.
     properties:
-      - {redundancy: external, ausize: 1 }      # Redundancy: External, Normal, Ausize 1MB is default.
+      - {redundancy: external, ausize: 4 }      # Redundancy: External, Normal, Ausize 4MB is default.
     attributes:
       - {name: 'compatible.rdbms', value: 19.0.0.0}
       - {name: 'compatible.asm', value: 19.0.0.0}
@@ -147,7 +148,7 @@ oracle_user: oracle             # Provide the username who owns the Oracle Insta
 #oracle_group: oinstall    # Primary group for oracle_user.
 oracle_stage: /tmp/orcl  # Provide path on the target AIX lpar to stage response files.
 oracle_base: /u01/base
-oracle_dbf_dir_asm: +DATA                 # Provide path on the Lpar to store datafiles.
+oracle_dbf_dir_asm: '+DATA'                 # Provide path on the Lpar to store datafiles.
 
 
 # This is an example layout to create a database.
