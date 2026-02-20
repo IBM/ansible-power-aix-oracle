@@ -18,22 +18,30 @@
     pp_size: 32 
     vg_type: scalable
     state: present
-    pvs: "{{ ora_sw_vg_disk }}"
+    pvs: "{{ item }}"
+  with_items: "{{ora_sw_vg_disk}}"
   when : ora_sw_vg != "rootvg"
+
+- name: Create a logical volume with maximum placement policy
+  ibm.power_aix.lvol:
+    vg: "{{ ora_sw_vg }}"
+    lv: "{{ orabinlv_name }}"
+    size: "{{ ora_sw_fs_size }}"
+    policy: maximum
+    state: present
 
 - name: Creating Filesystem for S/W Installation
   ibm.power_aix.filesystem:
     filesystem: "{{ ora_sw_fs }}"
     state: present
     attributes: "size={{ ora_sw_fs_size }}"
-    vg: "{{ ora_sw_vg }}"
+    device: "{{ orabinlv_name }}"
     auto_mount: True
 
 - name: Mount the Filesystem for S/W Installation
   ibm.power_aix.mount: 
     mount_dir: "{{ ora_sw_fs }}"
     state: mount
-  ignore_errors: yes
 
 - name: Creating Oracle Base directory
   ansible.builtin.file:
